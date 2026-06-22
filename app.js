@@ -1120,11 +1120,13 @@ function renderCreate() {
   const dots = [1,2,3,4].map(i => `<span class="step-dot ${i===step?'on':''}"></span>`).join("");
 
   m.innerHTML = `
-    <div class="page-title">${title}</div>
-    <div class="page-sub">${sub}</div>
-    ${body}
-    <div class="create-nav">${backBtn}${fwdBtn}</div>
-    <div class="step-dots">${dots}</div>
+    <div class="create-wrap">
+      <div class="page-title">${title}</div>
+      <div class="page-sub">${sub}</div>
+      ${body}
+      <div class="create-nav">${backBtn}${fwdBtn}</div>
+      <div class="step-dots">${dots}</div>
+    </div>
   `;
 }
 
