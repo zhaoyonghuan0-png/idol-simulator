@@ -234,9 +234,13 @@ function tick(cost) {
     S.res.energy = clamp(S.res.energy - cost, 0, 100);
   }
   S.day += 1;
-  // 每日任务在天数变化后随机加一条群聊
+  // 每日推进时按场景挑群聊池
   if (Math.random() < 0.6) {
-    const c = D.fan_chats[Math.floor(Math.random()*D.fan_chats.length)];
+    let pool = D.fansp_all;
+    if ((S.res.stress||0) >= 60) pool = [...pool, ...D.fansp_e];
+    if (S.res.fans >= S.lastMilestone && S.lastMilestone > 0) pool = [...pool, ...D.fansp_n];
+    pool = [...pool, ...D.fansp_d];  // 日常池始终有
+    const c = pool[Math.floor(Math.random()*pool.length)];
     S.chats.push({ ...c, day: S.day });
     if (S.chats.length > 50) S.chats.shift();
   }
@@ -286,9 +290,10 @@ function startSchedule(id) {
   if (S.res.energy < sc.cost) { alert("体力不足。"); return; }
   S.res.energy -= sc.cost;
   S.running = { id, startedDay: S.day, duration: sc.duration, until: S.day + sc.duration };
-  log(`开始行程：${sc.name}（持续${sc.duration}天）`);
+  log(`开始行程：${sc.name}（${sc.duration}天自动跑）`);
   saveState();
   render();
+  startAutoAdvance();
 }
 
 function advanceSchedule() {
@@ -300,11 +305,24 @@ function advanceSchedule() {
     S.running = null;
     S.daily.schedCount += 1;
     triggerNpcMessage("schedule_done");
+    // 行程结束触发后援会"活动反馈"
+    const fc = D.fansp_c[Math.floor(Math.random()*D.fansp_c.length)];
+    S.chats.push({ ...fc, day: S.day });
     checkDailyTasks();
     checkEvents();
+    if (S._advanceTimer) { clearInterval(S._advanceTimer); S._advanceTimer = null; }
   }
   saveState();
   render();
+}
+
+// 自动推进：行程开始后每 2 秒推一天（不可暂停，原站逻辑）
+function startAutoAdvance() {
+  if (S._advanceTimer) clearInterval(S._advanceTimer);
+  S._advanceTimer = setInterval(() => {
+    if (!S.running) { clearInterval(S._advanceTimer); S._advanceTimer = null; return; }
+    advanceSchedule();
+  }, 2000);
 }
 
 // ===== 动作：发动态 =====
@@ -315,6 +333,9 @@ function doPost() {
   applyGain({ fans: 300, exposure: 2 }, "发布动态");
   S.daily.postCount += 1;
   triggerNpcMessage("post");
+  // 发动态触发后援会"新内容"反应
+  const fc = D.fansp_n[Math.floor(Math.random()*D.fansp_n.length)];
+  S.chats.push({ ...fc, day: S.day });
   checkDailyTasks();
   render();
 }
@@ -579,8 +600,8 @@ function renderSchedule() {
         <div style="font-size:12px;color:#666">${sc.desc}</div>
         <div class="pbar"><div style="width:${pct}%"></div></div>
         <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:12px;color:#8e8e93">剩余 ${left} 天</span>
-          <button class="btn" onclick="advanceSchedule()">推进 1 天</button>
+          <span style="font-size:12px;color:#8e8e93">自动跑……剩余 ${left} 天</span>
+          <button class="btn ghost" onclick="advanceSchedule()">加速</button>
         </div>
       </div>
     `;
@@ -741,5 +762,7 @@ function init() {
     }, 200);
   }
   render();
+  // 加载存档时恢复自动推进
+  if (S.running) startAutoAdvance();
 }
 init();

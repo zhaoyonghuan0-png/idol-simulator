@@ -37,13 +37,13 @@ window.GAME_DATA = {
 
   // 行程（挂机任务：消耗体力 + 时间 → 收获粉丝/金币/曝光 + 压力 + 口碑）
   schedules: [
-    { id: "s_stage_small", name: "剧场舞台",   desc: "积累打榜基础分",         cost: 25, duration: 3, gain: { fans: 800,   coin: 200,  exposure: 5,  stress: 10, reputation: 1  }, requires: { vocal: 0,  dance: 0  } },
-    { id: "s_variety",     name: "综艺通告",   desc: "参加热门综艺，提升路人好感", cost: 30, duration: 4, gain: { fans: 2500,  coin: 600,  exposure: 12, stress: 15, reputation: 3  }, requires: { charm: 30 } },
-    { id: "s_album",       name: "发布单曲",   desc: "在专辑工作室发布新单曲",     cost: 40, duration: 6, gain: { fans: 5000,  coin: 1500, exposure: 20, stress: 20, reputation: 5  }, requires: { vocal: 50, create: 30 } },
-    { id: "s_concert_mid", name: "中型演唱会", desc: "中等规模演出，积累现场口碑", cost: 50, duration: 8, gain: { fans: 12000, coin: 3500, exposure: 25, stress: 25, reputation: 8  }, requires: { vocal: 60, dance: 60 } },
-    { id: "s_endorse",     name: "品牌代言",   desc: "拍摄商业广告，金主爸爸来了", cost: 35, duration: 5, gain: { fans: 4000,  coin: 8000, exposure: 18, stress: 10, reputation: 10 }, requires: { charm: 70 } },
-    { id: "s_concert_big", name: "万人音乐节", desc: "万人舞台压轴演出",           cost: 70, duration: 10, gain: { fans: 35000, coin: 12000, exposure: 40, stress: 30, reputation: 15 }, requires: { vocal: 80, dance: 80, charm: 70 } },
-    { id: "s_award",       name: "颁奖典礼",   desc: "出席年度颁奖典礼，展示风采", cost: 60, duration: 8, gain: { fans: 50000, coin: 20000, exposure: 60, stress: 20, reputation: 20 }, requires: { fans: 1000000 } }
+    { id: "s_stage_small", name: "剧场舞台",   desc: "积累打榜基础分",         cost: 25, duration: 3, gain: { fans: 8000,    coin: 200,  exposure: 5,  stress: 10, reputation: 1  }, requires: { vocal: 0,  dance: 0  } },
+    { id: "s_variety",     name: "综艺通告",   desc: "参加热门综艺，提升路人好感", cost: 30, duration: 4, gain: { fans: 25000,   coin: 600,  exposure: 12, stress: 15, reputation: 3  }, requires: { charm: 30 } },
+    { id: "s_album",       name: "发布单曲",   desc: "在专辑工作室发布新单曲",     cost: 40, duration: 6, gain: { fans: 50000,   coin: 1500, exposure: 20, stress: 20, reputation: 5  }, requires: { vocal: 50, create: 30 } },
+    { id: "s_concert_mid", name: "中型演唱会", desc: "中等规模演出，积累现场口碑", cost: 50, duration: 8, gain: { fans: 120000,  coin: 3500, exposure: 25, stress: 25, reputation: 8  }, requires: { vocal: 60, dance: 60 } },
+    { id: "s_endorse",     name: "品牌代言",   desc: "拍摄商业广告，金主爸爸来了", cost: 35, duration: 5, gain: { fans: 40000,   coin: 8000, exposure: 18, stress: 10, reputation: 10 }, requires: { charm: 70 } },
+    { id: "s_concert_big", name: "万人音乐节", desc: "万人舞台压轴演出",           cost: 70, duration: 10, gain: { fans: 350000,  coin: 12000, exposure: 40, stress: 30, reputation: 15 }, requires: { vocal: 80, dance: 80, charm: 70 } },
+    { id: "s_award",       name: "颁奖典礼",   desc: "出席年度颁奖典礼，展示风采", cost: 60, duration: 8, gain: { fans: 500000,  coin: 20000, exposure: 60, stress: 20, reputation: 20 }, requires: { fans: 10000000 } }
   ],
 
   // 商城（金币购买，加固定属性 or 装饰）
@@ -135,30 +135,49 @@ window.GAME_DATA = {
     "新单曲上线，去听我！等你们的评论！"
   ],
 
-  // 粉丝群聊（后援会消息池，随机弹出）
-  fan_chats: [
-    { name: "后援会会长",   text: "今天有个新人朋友加群，大家欢迎一下！" },
-    { name: "数据组小橙",   text: "播放量破亿了！比预计早三天！大家太给力了！" },
-    { name: "应援组阿然",   text: "下周演唱会的应援物，颜色色卡发群文件了！" },
-    { name: "后援会暖暖",   text: "刚才官博发了新图，姐妹们冲！" },
-    { name: "宣传组云云",   text: "热搜上来了，控评位置已经安排好！" },
-    { name: "打榜组阿璃",   text: "新人打榜教程已更新，五分钟学会！" },
-    { name: "后援会小鹿",   text: "今天爱豆在练习室那张状态照……心疼……" },
-    { name: "物料组CC",     text: "周边定了荧光棒升级款，预购链接发群里了！" },
-    { name: "副会长小敏",   text: "啊啊啊获奖了！！愿望成真了！！！" },
-    { name: "后援会阿糖",   text: "评论区有黑粉，姐妹们去用事实说话不要情绪化！" }
+  // 粉丝群聊（按场景分类触发，参考原站 fc_c/d/e/n 结构）
+  fansp_c: [  // 应援/活动组织
+    { name: "应援组长阿然",   text: "应援口号定稿了！「星河万里，唯你最亮！」回复✅确认！" },
+    { name: "物料组CC",       text: "这次周边定了荧光棒升级版！颜色是爱豆签名款专属色！" },
+    { name: "后勤组小圆",     text: "到场的小伙伴记得提前两小时到，要占前排！" },
+    { name: "后援会会长",     text: "这次应援活动全程无事故！大家辛苦了！" }
+  ],
+  fansp_n: [  // 新闻/热搜/新内容
+    { name: "后援会小鹿",     text: "新单曲的预告出了！！光是预告就听哭了！！" },
+    { name: "后援会暖暖",     text: "官博发新封面图了！！太好看了吧！！" },
+    { name: "后援会阿糖",     text: "上热搜了！！快去评论区控评！！" },
+    { name: "副会长小敏",     text: "获奖了！！感谢所有投票的小可爱！！！" },
+    { name: "数据组小橙",     text: "播放量破新纪录了！！比预计早了整整三天！！" }
+  ],
+  fansp_d: [  // 日常闲聊
+    { name: "后援会暖暖",     text: "今天上班路上听爱豆的歌，通勤都变得有意义了哈哈" },
+    { name: "后援会小鹿",     text: "今天心情不好来群里找能量，果然追星让人开心！" },
+    { name: "后援会早早",     text: "昨天的直播那个手势！！太可爱了反复看了七遍！！" },
+    { name: "后援会小树",     text: "无聊翻以前的现场视频，每次都能被重新圈粉" },
+    { name: "数据组小橙",     text: "后援团官方号今天涨粉五千，我们越来越大了！！" }
+  ],
+  fansp_e: [  // 情绪/支持
+    { name: "后援会小鹿",     text: "看到爱豆在练习室那张状态照……累成那样还在坚持……心疼" },
+    { name: "后援会阿糖",     text: "无论发生什么，我们都会陪在爱豆身边，不忘初心！" },
+    { name: "后援会会长",     text: "家人们，今天爱豆压力很大，我们去评论区刷温暖的话" },
+    { name: "打榜组阿璃",     text: "互帮互助！新人朋友看过来，打榜教程五分钟学会！" }
+  ],
+  fansp_all: [  // 通用池，兜底
+    { name: "后援会会长",     text: "今天有个新人朋友加群，大家欢迎一下！" },
+    { name: "后援会阿糖",     text: "评论区有黑粉，姐妹们去用事实说话不要情绪化！" },
+    { name: "宣传组云云",     text: "大家转发今天的新闻稿！扩散！" },
+    { name: "打榜组阿璃",     text: "打榜教程已更新在群文件！五分钟学会！" }
   ],
 
-  // 结局（满足条件触发）
+  // 结局（满足条件触发）— 阈值×10，避免开局就结束
   endings: [
-    { id: "ending_god",     cond: { fans: 50000000, vocal: 90, dance: 90, charm: 90, create: 80 }, title: "顶流封神", desc: "你以全维度顶尖姿态完成谢幕演唱会，行业再无后继。" },
-    { id: "ending_actor",   cond: { fans: 5000000, charm: 90 },                                     title: "影视破圈", desc: "你转战大银幕，成为新一代国民演员。" },
-    { id: "ending_overseas",cond: { fans: 3000000 },  flag: "overseas",                              title: "海外征途", desc: "你在格莱美舞台用母语高歌一曲，国际化路线开花。" },
-    { id: "ending_solo",    cond: { fans: 2000000 },  flag: "solo_path",                             title: "创立厂牌", desc: "你从0组建独立厂牌，签下三位新人，行业地位重塑。" },
-    { id: "ending_retire",  cond: { fans: 1000000 },                                                  title: "低调隐退", desc: "你选择在事业上升期退场，留下一个干净的偶像传说。" },
-    { id: "ending_rookie",  cond: {},                                                                  title: "初心未改", desc: "粉丝不多，但每一个都还在听你的歌。" }
+    { id: "ending_god",     cond: { fans: 500000000, vocal: 90, dance: 90, charm: 90, create: 80 }, title: "顶流封神", desc: "你以全维度顶尖姿态完成谢幕演唱会，行业再无后继。" },
+    { id: "ending_actor",   cond: { fans: 50000000, charm: 90 },                                     title: "影视破圈", desc: "你转战大银幕，成为新一代国民演员。" },
+    { id: "ending_overseas",cond: { fans: 30000000 }, flag: "overseas",                              title: "海外征途", desc: "你在格莱美舞台用母语高歌一曲，国际化路线开花。" },
+    { id: "ending_solo",    cond: { fans: 20000000 }, flag: "solo_path",                             title: "创立厂牌", desc: "你从0组建独立厂牌，签下三位新人，行业地位重塑。" },
+    { id: "ending_retire",  cond: { fans: 10000000 },                                                title: "低调隐退", desc: "你选择在事业上升期退场，留下一个干净的偶像传说。" },
+    { id: "ending_rookie",  cond: {},                                                                title: "初心未改", desc: "粉丝不多，但每一个都还在听你的歌。" }
   ],
-
   // 技能等级阶梯（0-100 映射成 Lv.1 - Lv.10）
   skill_levels: [
     { min: 0,  lv: 1,  name: "新手" },
