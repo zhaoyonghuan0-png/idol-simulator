@@ -16,8 +16,10 @@ const defaultState = () => {
     triggered: {},      // 已触发过的剧情事件id
     daily: { trainCount: 0, postCount: 0, schedCount: 0, claimed: {} },
     chats: [],          // 群聊历史
+    messages: [],       // NPC 私信 {from, text, day, read}
     page: "home",
-    ended: null
+    ended: null,
+    lastMilestone: 0    // 已触发过的最大里程碑（粉丝数）
   };
 };
 
@@ -46,10 +48,17 @@ function now() { return Date.now(); }
 
 function applyGain(gain, sourceName) {
   if (!gain) return;
-  for (const k in gain) {
-    const v = gain[k];
+  // 压力惩罚：压力≥70 时，粉丝/口碑收益打 6 折；压力≥85 时打 3 折
+  const stress = S.res.stress || 0;
+  const penalty = stress >= 85 ? 0.3 : (stress >= 70 ? 0.6 : 1);
+  const realGain = { ...gain };
+  if (penalty < 1) {
+    if (realGain.fans       > 0) realGain.fans       = Math.round(realGain.fans * penalty);
+    if (realGain.reputation > 0) realGain.reputation = Math.round(realGain.reputation * penalty);
+  }
+  for (const k in realGain) {
+    const v = realGain[k];
     if (k === "energy") {
-      // energy 走 res 通道，但 cost 是减 energy
       S.res.energy = clamp((S.res.energy||0) + v, 0, 100);
     } else if (S.res[k] !== undefined) {
       const cap = D.theme.resources.find(r => r.key === k)?.max;
@@ -60,7 +69,38 @@ function applyGain(gain, sourceName) {
       S.stats[k] = clamp((S.stats[k]||0) + v, 0, 100);
     }
   }
-  if (sourceName) log(`${sourceName} 完成 → ${formatGain(gain)}`);
+  if (sourceName) {
+    const tail = penalty < 1 ? `（高压力，收益${Math.round(penalty*100)}%）` : "";
+    log(`${sourceName} → ${formatGain(realGain)}${tail}`);
+  }
+}
+
+// 技能等级映射（0-100 → Lv.1-10）
+function getLevel(value) {
+  const v = value || 0;
+  let lv = D.skill_levels[0];
+  for (const s of D.skill_levels) {
+    if (v >= s.min) lv = s;
+  }
+  return lv;
+}
+
+// NPC 消息触发器 — 按事件随机选 1 条消息
+function triggerNpcMessage(eventType) {
+  const pool = D.npc_messages.filter(m => m.trigger === eventType);
+  if (pool.length === 0) return;
+  const msg = pool[Math.floor(Math.random() * pool.length)];
+  const npc = D.npcs.find(n => n.id === msg.from);
+  if (!npc) return;
+  S.messages.unshift({
+    from: msg.from,
+    fromName: npc.name,
+    color: npc.color,
+    text: msg.text,
+    day: S.day,
+    read: false
+  });
+  if (S.messages.length > 50) S.messages.pop();
 }
 function formatGain(g) {
   const parts = [];
@@ -144,6 +184,24 @@ function tick(cost) {
     S.chats.push({ ...c, day: S.day });
     if (S.chats.length > 50) S.chats.shift();
   }
+  // 随机概率触发 NPC 私信（30%）
+  if (Math.random() < 0.3) {
+    triggerNpcMessage("random");
+  }
+  // 高压力时触发关心消息
+  if ((S.res.stress||0) >= 70 && Math.random() < 0.5) {
+    triggerNpcMessage("stress_high");
+  }
+  // 粉丝里程碑检查（每翻10倍触发一次）
+  const milestones = [1000, 10000, 100000, 1000000, 10000000];
+  for (const m of milestones) {
+    if (S.res.fans >= m && S.lastMilestone < m) {
+      S.lastMilestone = m;
+      triggerNpcMessage("fans_milestone");
+      log(`🎉 粉丝突破 ${fmt(m)}！`);
+      break;
+    }
+  }
   checkEvents();
   saveState();
   return true;
@@ -185,6 +243,7 @@ function advanceSchedule() {
     applyGain(sc.gain, sc.name);
     S.running = null;
     S.daily.schedCount += 1;
+    triggerNpcMessage("schedule_done");
     checkDailyTasks();
     checkEvents();
   }
@@ -199,6 +258,7 @@ function doPost() {
   S.posts.push({ text, day: S.day });
   applyGain({ fans: 300, exposure: 2 }, "发布动态");
   S.daily.postCount += 1;
+  triggerNpcMessage("post");
   checkDailyTasks();
   render();
 }
@@ -334,27 +394,37 @@ function render() {
     { id: "home",     name: "首页",   svg: '<path d="M3 12L12 4l9 8M5 10v10h14V10"/>' },
     { id: "train",    name: "养成",   svg: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>' },
     { id: "schedule", name: "行程",   svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' },
+    { id: "message",  name: "消息",   svg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
     { id: "social",   name: "社交",   svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>' },
     { id: "shop",     name: "商城",   svg: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>' }
   ];
-  document.querySelector("#tabbar").innerHTML = tabs.map(n => `
+  const unread = (S.messages||[]).filter(m => !m.read).length;
+  document.querySelector("#tabbar").innerHTML = tabs.map(n => {
+    const badge = (n.id === "message" && unread > 0) ? `<span class="tab-badge">${unread}</span>` : "";
+    return `
     <button class="tab-item ${S.page===n.id?"active":""}" onclick="navigate('${n.id}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${n.svg}</svg>
-      <span>${n.name}</span>
-    </button>
-  `).join("");
+      <span>${n.name}</span>${badge}
+    </button>`;
+  }).join("");
 
   // 主体
   const m = document.querySelector("#main");
   if (S.page === "home")     m.innerHTML = renderHome();
   if (S.page === "train")    m.innerHTML = renderTrain();
   if (S.page === "schedule") m.innerHTML = renderSchedule();
+  if (S.page === "message")  m.innerHTML = renderMessages();
   if (S.page === "social")   m.innerHTML = renderSocial();
   if (S.page === "shop")     m.innerHTML = renderShop();
 
   if (S.page === "home") {
     const cv = document.querySelector("#radar");
     if (cv) drawRadar(cv);
+  }
+  if (S.page === "message") {
+    // 进入消息页自动标记已读
+    (S.messages||[]).forEach(m => m.read = true);
+    saveState();
   }
 }
 
@@ -363,7 +433,7 @@ function renderHome() {
     const v = S.stats[s.key]||0;
     return `
       <div class="stat-block">
-        <div class="stat-label">${s.name}</div>
+        <div class="stat-label">${s.name} · <b style="color:#f43f5e">Lv.${getLevel(v).lv} ${getLevel(v).name}</b></div>
         <div class="stat-num">${v}<span style="font-size:11px;color:#8e8e93;font-weight:500"> /100</span></div>
         <div class="bar"><div style="width:${v}%"></div></div>
       </div>
@@ -484,6 +554,28 @@ function renderSchedule() {
     <div class="page-sub">接通告攒粉丝，跑通告赚金币</div>
     ${running}
     <div class="card">${items}</div>
+  `;
+}
+
+function renderMessages() {
+  const msgs = (S.messages||[]).length > 0
+    ? S.messages.map(m => `
+      <div style="display:flex;gap:10px;margin-bottom:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.04)">
+        <div style="width:34px;height:34px;border-radius:50%;background:${m.color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0">${m.fromName.slice(-2).trim().slice(-1)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;display:flex;justify-content:space-between">
+            <span style="color:${m.color}">${m.fromName}</span>
+            <span style="font-size:10px;color:#a1a1aa">Day ${m.day}</span>
+          </div>
+          <div style="font-size:12px;color:#52525b;margin-top:3px">${m.text}</div>
+        </div>
+      </div>
+    `).join("")
+    : `<div style="color:#a1a1aa;text-align:center;padding:24px 0;font-size:12px">还没有消息</div>`;
+  return `
+    <div class="page-title">消息</div>
+    <div class="page-sub">来自经纪人、品牌方、后援会、好友、媒体的私信</div>
+    <div class="card">${msgs}</div>
   `;
 }
 

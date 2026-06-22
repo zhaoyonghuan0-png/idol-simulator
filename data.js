@@ -16,31 +16,34 @@ window.GAME_DATA = {
     ],
     // 资源
     resources: [
-      { key: "energy",   name: "体力",   max: 100, init: 100 },
-      { key: "fans",     name: "粉丝",   max: null, init: 0 },
-      { key: "coin",     name: "金币",   max: null, init: 500 },
-      { key: "exposure", name: "曝光度", max: 100, init: 10 }
+      { key: "energy",   name: "体力",     max: 100, init: 100 },
+      { key: "stress",   name: "压力",     max: 100, init: 20  },
+      { key: "reputation", name: "口碑",   max: 100, init: 50  },
+      { key: "fans",     name: "粉丝",     max: null, init: 0 },
+      { key: "coin",     name: "金币",     max: null, init: 500 },
+      { key: "exposure", name: "曝光度",   max: 100, init: 10 }
     ]
   },
 
-  // 养成训练（耗体力 → 加属性）
+  // 养成训练（耗体力 → 加属性 + 压力）
   trainings: [
-    { id: "t_vocal",   name: "声乐训练", desc: "专业声乐老师一对一教学，唱功大幅提升", cost: 20, gain: { vocal: 8, exposure: 1 } },
-    { id: "t_dance",   name: "舞蹈训练", desc: "基础功、编舞拆解，全面提升舞技",       cost: 20, gain: { dance: 8, exposure: 1 } },
-    { id: "t_create",  name: "创作训练", desc: "专注音乐创作，提升原创实力",           cost: 20, gain: { create: 8, exposure: 1 } },
-    { id: "t_style",   name: "造型训练", desc: "发型、妆容、服装搭配，提升颜值",       cost: 15, gain: { charm: 8, exposure: 2 } },
-    { id: "t_rest",    name: "休息放松", desc: "运动按摩+营养补充，迅速恢复体力",     cost: -40, gain: {} }  // cost 为负 = 回体力
+    { id: "t_vocal",   name: "声乐训练", desc: "专业声乐老师一对一教学，唱功大幅提升", cost: 20, gain: { vocal: 8, exposure: 1, stress: 8 } },
+    { id: "t_dance",   name: "舞蹈训练", desc: "基础功、编舞拆解，全面提升舞技",       cost: 20, gain: { dance: 8, exposure: 1, stress: 8 } },
+    { id: "t_create",  name: "创作训练", desc: "专注音乐创作，提升原创实力",           cost: 20, gain: { create: 8, exposure: 1, stress: 10 } },
+    { id: "t_style",   name: "造型训练", desc: "发型、妆容、服装搭配，提升颜值",       cost: 15, gain: { charm: 8, exposure: 2, stress: 5 } },
+    { id: "t_rest",    name: "休息放松", desc: "运动按摩+营养补充，迅速恢复体力",     cost: -40, gain: { stress: -15 } },  // 休息：体力+40, 压力-15
+    { id: "t_therapy", name: "心理疏导", desc: "专业心理咨询，全面释放压力",          cost: 10, gain: { stress: -40, reputation: 2 } }
   ],
 
-  // 行程（挂机任务：消耗体力 + 时间 → 收获粉丝/金币/曝光）
+  // 行程（挂机任务：消耗体力 + 时间 → 收获粉丝/金币/曝光 + 压力 + 口碑）
   schedules: [
-    { id: "s_stage_small", name: "剧场舞台",   desc: "积累打榜基础分",         cost: 25, duration: 3, gain: { fans: 800,   coin: 200,  exposure: 5  }, requires: { vocal: 0,  dance: 0  } },
-    { id: "s_variety",     name: "综艺通告",   desc: "参加热门综艺，提升路人好感", cost: 30, duration: 4, gain: { fans: 2500,  coin: 600,  exposure: 12 }, requires: { charm: 30 } },
-    { id: "s_album",       name: "发布单曲",   desc: "在专辑工作室发布新单曲",     cost: 40, duration: 6, gain: { fans: 5000,  coin: 1500, exposure: 20 }, requires: { vocal: 50, create: 30 } },
-    { id: "s_concert_mid", name: "中型演唱会", desc: "中等规模演出，积累现场口碑", cost: 50, duration: 8, gain: { fans: 12000, coin: 3500, exposure: 25 }, requires: { vocal: 60, dance: 60 } },
-    { id: "s_endorse",     name: "品牌代言",   desc: "拍摄商业广告，金主爸爸来了", cost: 35, duration: 5, gain: { fans: 4000,  coin: 8000, exposure: 18 }, requires: { charm: 70 } },
-    { id: "s_concert_big", name: "万人音乐节", desc: "万人舞台压轴演出",           cost: 70, duration: 10, gain: { fans: 35000, coin: 12000, exposure: 40 }, requires: { vocal: 80, dance: 80, charm: 70 } },
-    { id: "s_award",       name: "颁奖典礼",   desc: "出席年度颁奖典礼，展示风采", cost: 60, duration: 8, gain: { fans: 50000, coin: 20000, exposure: 60 }, requires: { fans: 1000000 } }
+    { id: "s_stage_small", name: "剧场舞台",   desc: "积累打榜基础分",         cost: 25, duration: 3, gain: { fans: 800,   coin: 200,  exposure: 5,  stress: 10, reputation: 1  }, requires: { vocal: 0,  dance: 0  } },
+    { id: "s_variety",     name: "综艺通告",   desc: "参加热门综艺，提升路人好感", cost: 30, duration: 4, gain: { fans: 2500,  coin: 600,  exposure: 12, stress: 15, reputation: 3  }, requires: { charm: 30 } },
+    { id: "s_album",       name: "发布单曲",   desc: "在专辑工作室发布新单曲",     cost: 40, duration: 6, gain: { fans: 5000,  coin: 1500, exposure: 20, stress: 20, reputation: 5  }, requires: { vocal: 50, create: 30 } },
+    { id: "s_concert_mid", name: "中型演唱会", desc: "中等规模演出，积累现场口碑", cost: 50, duration: 8, gain: { fans: 12000, coin: 3500, exposure: 25, stress: 25, reputation: 8  }, requires: { vocal: 60, dance: 60 } },
+    { id: "s_endorse",     name: "品牌代言",   desc: "拍摄商业广告，金主爸爸来了", cost: 35, duration: 5, gain: { fans: 4000,  coin: 8000, exposure: 18, stress: 10, reputation: 10 }, requires: { charm: 70 } },
+    { id: "s_concert_big", name: "万人音乐节", desc: "万人舞台压轴演出",           cost: 70, duration: 10, gain: { fans: 35000, coin: 12000, exposure: 40, stress: 30, reputation: 15 }, requires: { vocal: 80, dance: 80, charm: 70 } },
+    { id: "s_award",       name: "颁奖典礼",   desc: "出席年度颁奖典礼，展示风采", cost: 60, duration: 8, gain: { fans: 50000, coin: 20000, exposure: 60, stress: 20, reputation: 20 }, requires: { fans: 1000000 } }
   ],
 
   // 商城（金币购买，加固定属性 or 装饰）
@@ -154,5 +157,55 @@ window.GAME_DATA = {
     { id: "ending_solo",    cond: { fans: 2000000 },  flag: "solo_path",                             title: "创立厂牌", desc: "你从0组建独立厂牌，签下三位新人，行业地位重塑。" },
     { id: "ending_retire",  cond: { fans: 1000000 },                                                  title: "低调隐退", desc: "你选择在事业上升期退场，留下一个干净的偶像传说。" },
     { id: "ending_rookie",  cond: {},                                                                  title: "初心未改", desc: "粉丝不多，但每一个都还在听你的歌。" }
+  ],
+
+  // 技能等级阶梯（0-100 映射成 Lv.1 - Lv.10）
+  skill_levels: [
+    { min: 0,  lv: 1,  name: "新手" },
+    { min: 15, lv: 2,  name: "入门" },
+    { min: 25, lv: 3,  name: "熟练" },
+    { min: 40, lv: 4,  name: "进阶" },
+    { min: 55, lv: 5,  name: "专精" },
+    { min: 65, lv: 6,  name: "卓越" },
+    { min: 75, lv: 7,  name: "大师" },
+    { min: 85, lv: 8,  name: "宗师" },
+    { min: 92, lv: 9,  name: "封神" },
+    { min: 98, lv: 10, name: "传奇" }
+  ],
+
+  // NPC 联系人 — 不同角色发不同类型消息
+  npcs: [
+    { id: "agent",    name: "经纪人·林姐", role: "agent",    color: "#3b82f6" },
+    { id: "brand",    name: "品牌方·王总监", role: "brand",    color: "#f59e0b" },
+    { id: "fanclub",  name: "后援会·会长",  role: "fanclub",  color: "#f43f5e" },
+    { id: "friend",   name: "圈内好友·小宇", role: "friend",   color: "#10b981" },
+    { id: "media",    name: "媒体记者·陈姐", role: "media",    color: "#8b5cf6" }
+  ],
+
+  // NPC 消息池 — 按场景触发（trigger.event 可为：post/schedule_done/stress_high/fans_milestone/random）
+  npc_messages: [
+    // ==== 经纪人（事务通知 / 行程相关） ====
+    { from: "agent", trigger: "schedule_done", text: "刚收到节目组反馈，这次表现不错，下个月还有同档期的资源给你。" },
+    { from: "agent", trigger: "schedule_done", text: "刚谈下一个杂志拍摄，给你留了空档，回头详细对一下。" },
+    { from: "agent", trigger: "stress_high",   text: "看你最近行程排太满，要不要先停两天？身体是本钱。" },
+    { from: "agent", trigger: "fans_milestone",text: "粉丝量过线了，公司想给你提一档资源位，等你确认。" },
+    { from: "agent", trigger: "random",        text: "提醒一下，本月通告费已结，金额已到账。" },
+    // ==== 品牌方 ====
+    { from: "brand", trigger: "fans_milestone",text: "看到你最近的数据很爆，我们有个新品想邀请你做主推，价位可以聊。" },
+    { from: "brand", trigger: "schedule_done", text: "上次代言反响超出预期，加签一年的合作意向已发邮件。" },
+    { from: "brand", trigger: "random",        text: "节假日礼盒已经走快递了，附了张手写卡。" },
+    // ==== 后援会 ====
+    { from: "fanclub", trigger: "post",         text: "新动态我们已经做了图文整理，转评赞数据正在拉高！" },
+    { from: "fanclub", trigger: "schedule_done",text: "现场视频剪辑稿组里同步了，等你授权就发！" },
+    { from: "fanclub", trigger: "fans_milestone",text: "里程碑庆祝企划上线了，应援物已经印厂在赶工。" },
+    { from: "fanclub", trigger: "random",       text: "周报上线了，本周打榜数据稳居前三。" },
+    // ==== 圈内好友 ====
+    { from: "friend", trigger: "schedule_done", text: "刚才路过看你彩排了，状态比上回好多了。" },
+    { from: "friend", trigger: "stress_high",   text: "兄弟，看你这阵子忙得离谱，约个夜宵透透气？" },
+    { from: "friend", trigger: "random",        text: "新歌做完了？我这边有个 demo 想找你听一下。" },
+    // ==== 媒体记者 ====
+    { from: "media", trigger: "fans_milestone", text: "想做一个专访，主题是你这一年成长，方便约个时间吗？" },
+    { from: "media", trigger: "post",           text: "刚转了你的动态，关注度涨得很快，建议保持节奏。" },
+    { from: "media", trigger: "stress_high",    text: "听说你最近超负荷，要注意黑稿可能借机抹黑，提前打个招呼。" }
   ]
 };

@@ -298,3 +298,14 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; bac
 .post-item:last-child { border-bottom: none; }
 .post-item .day { font-size: 10px; color: #a1a1aa; }
 .post-item .txt { font-size: 13px; margin-top: 2px; }
+
+/* ===== Tab 红点 ===== */
+.tab-item { position: relative; }
+.tab-badge {
+  position: absolute; top: 2px; right: 25%;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px; background: #f43f5e;
+  color: #fff; font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.7);
+}
