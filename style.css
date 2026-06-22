@@ -360,3 +360,29 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; bac
 .chip-n { font-size: 14px; font-weight: 600; color: #18181b; }
 .chip-d { font-size: 11px; color: #71717a; margin-top: 2px; line-height: 1.4; }
 .chip.on .chip-n { color: #f43f5e; }
+
+/* 分页向导：圆形导航按钮 */
+.create-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; }
+.nav-circle {
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0;
+  transition: transform .12s ease, opacity .12s ease, box-shadow .12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-circle:active { transform: scale(0.9); }
+.nav-circle svg { width: 26px; height: 26px; }
+.nav-circle.forward {
+  background: linear-gradient(135deg, #f43f5e, #fb7185);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(244,63,94,0.38);
+}
+.nav-circle.back {
+  background: #fff;
+  color: #71717a;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.nav-placeholder { width: 56px; }
+.step-dots { display: flex; gap: 6px; justify-content: center; margin-top: 18px; }
+.step-dot { width: 6px; height: 6px; border-radius: 50%; background: #e4e4e7; transition: all .2s ease; }
+.step-dot.on { width: 18px; background: #f43f5e; }

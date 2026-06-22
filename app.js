@@ -1029,8 +1029,11 @@ window.toggleLog = toggleLog;
 window.setCreate = setCreate;
 window.finishCreate = finishCreate;
 
-// ===== 角色创建页 =====
-let createState = { name: "", gender: "female", appearance: "", debutType: "solo" };
+// ===== 角色创建页（4 步分页向导）=====
+let createState = { name: "", gender: "female", appearance: "", debutType: "solo", step: 1 };
+
+const ARROW_RIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>`;
+const ARROW_LEFT  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>`;
 
 function setCreate(key, val) {
   // 重渲染前先同步 input 当前值，避免重建 DOM 冲掉用户输入的艺名
@@ -1039,6 +1042,16 @@ function setCreate(key, val) {
   createState[key] = val;
   renderCreate();
 }
+
+function goCreateStep(step) {
+  const inp = document.querySelector("#ci-name");
+  if (inp) createState.name = inp.value;
+  createState.step = step;
+  renderCreate();
+  const main = document.querySelector("#main");
+  if (main) main.scrollTop = 0;
+}
+window.goCreateStep = goCreateStep;
 
 function renderCreate() {
   // 创建阶段隐藏顶栏/资源条/tab栏
@@ -1049,45 +1062,69 @@ function renderCreate() {
   const apps = D.theme.appearances;
   const debuts = D.theme.debutTypes;
   const m = document.querySelector("#main");
+  const step = c.step || 1;
+
+  let title = "", sub = "", body = "";
+  if (step === 1) {
+    title = "起个艺名";
+    sub = "第 1 步 · 这是你在舞台上的名字";
+    body = `
+      <div class="card">
+        <input id="ci-name" class="create-input" placeholder="给自己起个艺名" maxlength="12" value="${c.name}" autocomplete="off">
+      </div>`;
+  } else if (step === 2) {
+    title = "选择性别";
+    sub = "第 2 步";
+    body = `
+      <div class="card">
+        <div class="seg">
+          <button class="seg-btn ${c.gender==='female'?'on':''}" onclick="setCreate('gender','female')">女</button>
+          <button class="seg-btn ${c.gender==='male'?'on':''}" onclick="setCreate('gender','male')">男</button>
+        </div>
+      </div>`;
+  } else if (step === 3) {
+    title = "形象风格";
+    sub = "第 3 步 · 影响初始属性";
+    body = `
+      <div class="card">
+        <div class="chip-row">
+          ${apps.map(a => `
+            <button class="chip ${c.appearance===a.k?'on':''}" onclick="setCreate('appearance','${a.k}')">
+              <div class="chip-n">${a.name}</div>
+              <div class="chip-d">${a.desc}</div>
+            </button>
+          `).join("")}
+        </div>
+      </div>`;
+  } else {
+    title = "出道方式";
+    sub = "第 4 步 · 准备好就出发";
+    body = `
+      <div class="card">
+        <div class="seg">
+          ${debuts.map(d => `
+            <button class="seg-btn ${c.debutType===d.k?'on':''}" onclick="setCreate('debutType','${d.k}')">${d.name}</button>
+          `).join("")}
+        </div>
+      </div>`;
+  }
+
+  // 圆形导航按钮：第 1 步只有向右前进，第 2~4 步左侧多一个向左返回
+  const backBtn = step > 1
+    ? `<button class="nav-circle back" onclick="goCreateStep(${step-1})" aria-label="上一步">${ARROW_LEFT}</button>`
+    : `<div class="nav-placeholder"></div>`;
+  const fwdBtn = step < 4
+    ? `<button class="nav-circle forward" onclick="goCreateStep(${step+1})" aria-label="下一步">${ARROW_RIGHT}</button>`
+    : `<button class="nav-circle forward" onclick="finishCreate()" aria-label="开始出道">${ARROW_RIGHT}</button>`;
+
+  const dots = [1,2,3,4].map(i => `<span class="step-dot ${i===step?'on':''}"></span>`).join("");
+
   m.innerHTML = `
-    <div class="page-title">创建你的偶像</div>
-    <div class="page-sub">起个艺名，选定形象，开启出道之路</div>
-
-    <div class="card">
-      <h3>艺名</h3>
-      <input id="ci-name" class="create-input" placeholder="给自己起个艺名" maxlength="12" value="${c.name}">
-    </div>
-
-    <div class="card">
-      <h3>性别</h3>
-      <div class="seg">
-        <button class="seg-btn ${c.gender==='female'?'on':''}" onclick="setCreate('gender','female')">女</button>
-        <button class="seg-btn ${c.gender==='male'?'on':''}" onclick="setCreate('gender','male')">男</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>形象风格 <span style="font-size:11px;color:#8e8e93;font-weight:400">影响初始属性</span></h3>
-      <div class="chip-row">
-        ${apps.map(a => `
-          <button class="chip ${c.appearance===a.k?'on':''}" onclick="setCreate('appearance','${a.k}')">
-            <div class="chip-n">${a.name}</div>
-            <div class="chip-d">${a.desc}</div>
-          </button>
-        `).join("")}
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>出道方式</h3>
-      <div class="seg">
-        ${debuts.map(d => `
-          <button class="seg-btn ${c.debutType===d.k?'on':''}" onclick="setCreate('debutType','${d.k}')">${d.name}</button>
-        `).join("")}
-      </div>
-    </div>
-
-    <button class="btn" style="width:100%;margin-top:4px" onclick="finishCreate()">开始出道 →</button>
+    <div class="page-title">${title}</div>
+    <div class="page-sub">${sub}</div>
+    ${body}
+    <div class="create-nav">${backBtn}${fwdBtn}</div>
+    <div class="step-dots">${dots}</div>
   `;
 }
 
