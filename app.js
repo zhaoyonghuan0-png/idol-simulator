@@ -1113,7 +1113,7 @@ function renderCreate() {
   // 圆形导航按钮：第 1 步只有向右前进，第 2~4 步左侧多一个向左返回
   const backBtn = step > 1
     ? `<button class="nav-circle back" onclick="goCreateStep(${step-1})" aria-label="上一步">${ARROW_LEFT}</button>`
-    : `<div class="nav-placeholder"></div>`;
+    : "";
   const fwdBtn = step < 4
     ? `<button class="nav-circle forward" onclick="goCreateStep(${step+1})" aria-label="下一步">${ARROW_RIGHT}</button>`
     : `<button class="nav-circle forward" onclick="finishCreate()" aria-label="开始出道">${ARROW_RIGHT}</button>`;
