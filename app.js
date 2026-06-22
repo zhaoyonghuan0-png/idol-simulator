@@ -11,15 +11,27 @@ const defaultState = () => {
     stats, res,
     day: 1,
     flags: {},
-    posts: [],          // 已发布的动态文本
-    running: null,      // 当前正在跑的行程 {id, until, gain}
-    triggered: {},      // 已触发过的剧情事件id
+    posts: [],
+    running: null,
+    triggered: {},
     daily: { trainCount: 0, postCount: 0, schedCount: 0, claimed: {} },
-    chats: [],          // 群聊历史
-    messages: [],       // NPC 私信 {from, text, day, read}
+    weekly: { trainCount: 0, postCount: 0, schedCount: 0, weekStart: 1, claimed: {} },
+    chats: [],
+    messages: [],
     page: "home",
     ended: null,
-    lastMilestone: 0    // 已触发过的最大里程碑（粉丝数）
+    lastMilestone: 0,
+    // 新系统
+    achievements: [],        // 已解锁徽章 id 数组
+    albums: [],              // 已发布专辑 {id, name, day}
+    awards: [],              // 已获奖项 {id, name, day}
+    collections: [],         // 收藏品 id 数组
+    chartScore: 0,           // 打榜积分（行程产出）
+    chartHistory: [],        // 打榜历史 [{day, score}]
+    checkinStreak: 0,        // 连续签到
+    lastCheckinDay: 0,       // 最后签到的 day
+    meetPoints: 0,           // 见面会积分
+    dnd: false               // 免打扰
   };
 };
 
@@ -221,48 +233,140 @@ function checkEnding() {
   return null;
 }
 
+// ===== 检查成就 =====
+function checkAchievements() {
+  for (const a of D.achievements) {
+    if (S.achievements.includes(a.id)) continue;
+    let met = false;
+    if (a.id === "a_train10") met = (S.weekly.trainCount + S.daily.trainCount) >= 10;
+    else if (a.id === "a_sched5") met = (S.weekly.schedCount + S.daily.schedCount) >= 5;
+    else if (a.id === "a_fans10k") met = S.res.fans >= 10000;
+    else if (a.id === "a_fans100k") met = S.res.fans >= 100000;
+    else if (a.id === "a_fans1m") met = S.res.fans >= 1000000;
+    else if (a.id === "a_fans10m") met = S.res.fans >= 10000000;
+    else if (a.id === "a_album1") met = S.albums.length >= 1;
+    else if (a.id === "a_album5") met = S.albums.length >= 5;
+    else if (a.id === "a_award1") met = S.awards.length >= 1;
+    else if (a.id === "a_award5") met = S.awards.length >= 5;
+    else if (a.id === "a_master") met = Math.max(...D.theme.stats.map(st => S.stats[st.key]||0)) >= 85;
+    else if (a.id === "a_collect5") met = S.collections.length >= 5;
+    else if (a.id === "a_chart1") met = S.chartScore >= 1000;
+    else if (a.id === "a_chart10k") met = S.chartScore >= 10000;
+    else if (a.id === "a_checkin7") met = S.checkinStreak >= 7;
+    else if (a.id === "a_post50") met = S.posts.length >= 50;
+    else if (a.id === "a_coin100k") met = S.res.coin >= 100000;
+    else if (a.id === "a_meet100") met = S.meetPoints >= 100;
+    if (met) {
+      S.achievements.push(a.id);
+      log(`🏆 成就解锁：${a.name} — ${a.desc}`);
+    }
+  }
+}
+
+// ===== 检查奖项 + 收藏品掉落 =====
+function checkAwards() {
+  for (const aw of D.awards) {
+    if (S.awards.find(a => a.id === aw.id)) continue;
+    let met = true;
+    if (aw.cond.fans && S.res.fans < aw.cond.fans) met = false;
+    if (aw.cond.charm && S.stats.charm < aw.cond.charm) met = false;
+    if (aw.cond.albumCount && S.albums.length < aw.cond.albumCount) met = false;
+    if (met) {
+      S.awards.push({ id: aw.id, name: aw.name, icon: aw.icon, day: S.day });
+      log(`🎉 获得奖项：${aw.name}！`);
+      // 获奖随机掉落收藏品
+      if (Math.random() < 0.6) {
+        const pool = D.collectibles.filter(c => !S.collections.includes(c.id));
+        if (pool.length > 0) {
+          const col = pool[Math.floor(Math.random()*pool.length)];
+          S.collections.push(col.id);
+          log(`🎁 收集到：${col.name}`);
+        }
+      }
+    }
+  }
+}
+
+// ===== 打榜积分 =====
+function addChartScore(base) {
+  const mult = (S.res.reputation||0) / 50;
+  S.chartScore += Math.round(base * mult);
+  if (S.chartScore > 0) {
+    S.chartHistory.push({ day: S.day, score: S.chartScore });
+    if (S.chartHistory.length > 100) S.chartHistory.shift();
+  }
+}
+
+// ===== 签到 =====
+function doCheckin() {
+  if (S.lastCheckinDay >= S.day) { return; }
+  const streak = (S.lastCheckinDay >= S.day - 1) ? S.checkinStreak + 1 : 1;
+  S.checkinStreak = streak;
+  S.lastCheckinDay = S.day;
+  S.meetPoints += 5;
+  S.res.coin += streak >= 7 ? 5000 : (streak >= 3 ? 1000 : 200);
+  S.res.energy = Math.min(100, (S.res.energy||0) + 20);
+  log(`📅 签到 (连续${streak}天) 体力+20 金币+${streak >= 7 ? 5000 : (streak >= 3 ? 1000 : 200)}`);
+  checkAchievements();
+  saveState();
+  render();
+}
+
+// ===== 制作专辑 =====
+function startAlbum(id) {
+  if (S.running) { alert("当前行程进行中"); return; }
+  const al = D.album_types.find(x => x.id === id);
+  if (!al) return;
+  const req = checkRequires(al.requires);
+  if (!req.ok) { alert("条件不足：" + req.missing.join("、")); return; }
+  if (S.res.coin < al.cost) { alert("金币不足"); return; }
+  S.res.coin -= al.cost;
+  S.running = { id: "album_"+al.id, startedDay: S.day, duration: al.duration, until: S.day + al.duration, albumData: al };
+  log(`🎵 开始制作：${al.name}（${al.duration}天）`);
+  saveState(); render(); startAutoAdvance();
+}
+
 // ===== 推进时间（每次行动） =====
 function tick(cost) {
-  // 体力消耗
   if (cost > 0) {
-    if (S.res.energy < cost) {
-      alert("体力不足，先休息一下。");
-      return false;
-    }
+    if (S.res.energy < cost) { alert("体力不足"); return false; }
     S.res.energy -= cost;
   } else if (cost < 0) {
     S.res.energy = clamp(S.res.energy - cost, 0, 100);
   }
   S.day += 1;
-  // 每日推进时按场景挑群聊池
+  // 周任务重置
+  if (S.day - S.weekly.weekStart >= 7) {
+    S.weekly = { trainCount: 0, postCount: 0, schedCount: 0, weekStart: S.day, claimed: {} };
+  }
+  // 群聊
   if (Math.random() < 0.6) {
     let pool = D.fansp_all;
     if ((S.res.stress||0) >= 60) pool = [...pool, ...D.fansp_e];
     if (S.res.fans >= S.lastMilestone && S.lastMilestone > 0) pool = [...pool, ...D.fansp_n];
-    pool = [...pool, ...D.fansp_d];  // 日常池始终有
+    pool = [...pool, ...D.fansp_d];
     const c = pool[Math.floor(Math.random()*pool.length)];
     S.chats.push({ ...c, day: S.day });
     if (S.chats.length > 50) S.chats.shift();
   }
-  // 随机概率触发 NPC 私信（30%）
-  if (Math.random() < 0.3) {
-    triggerNpcMessage("random");
+  // NPC 消息（免打扰跳过）
+  if (!S.dnd) {
+    if (Math.random() < 0.3) triggerNpcMessage("random");
+    if ((S.res.stress||0) >= 70 && Math.random() < 0.5) triggerNpcMessage("stress_high");
   }
-  // 高压力时触发关心消息
-  if ((S.res.stress||0) >= 70 && Math.random() < 0.5) {
-    triggerNpcMessage("stress_high");
-  }
-  // 粉丝里程碑检查（每翻10倍触发一次）
+  // 粉丝里程碑
   const milestones = [1000, 10000, 100000, 1000000, 10000000];
   for (const m of milestones) {
     if (S.res.fans >= m && S.lastMilestone < m) {
       S.lastMilestone = m;
-      triggerNpcMessage("fans_milestone");
+      if (!S.dnd) triggerNpcMessage("fans_milestone");
       log(`🎉 粉丝突破 ${fmt(m)}！`);
       break;
     }
   }
   checkEvents();
+  checkAchievements();
+  checkAwards();
   saveState();
   return true;
 }
@@ -275,6 +379,8 @@ function doTrain(id) {
   applyGain(t.gain, t.name);
   if (t.cost > 0) {
     S.daily.trainCount += 1;
+    S.weekly.trainCount += 1;
+    S.meetPoints += 1;
     checkDailyTasks();
   }
   render();
@@ -301,11 +407,21 @@ function advanceSchedule() {
   const sc = D.schedules.find(x => x.id === S.running.id);
   S.day += 1;
   if (S.day >= S.running.until) {
-    applyGain(sc.gain, sc.name);
+    // 如果是专辑类型，存到 albums
+    if (S.running.albumData) {
+      const al = S.running.albumData;
+      S.albums.push({ id: al.id, name: al.name, day: S.day });
+      applyGain(al.gain, al.name);
+      addChartScore(500);
+    } else {
+      applyGain(sc.gain, sc.name);
+      addChartScore(sc.gain.fans ? Math.round(sc.gain.fans / 100) : 50);
+    }
     S.running = null;
     S.daily.schedCount += 1;
+    S.weekly.schedCount += 1;
+    S.meetPoints += 3;
     triggerNpcMessage("schedule_done");
-    // 行程结束触发后援会"活动反馈"
     const fc = D.fansp_c[Math.floor(Math.random()*D.fansp_c.length)];
     S.chats.push({ ...fc, day: S.day });
     checkDailyTasks();
@@ -332,6 +448,8 @@ function doPost() {
   S.posts.push({ text, day: S.day });
   applyGain({ fans: 300, exposure: 2 }, "发布动态");
   S.daily.postCount += 1;
+  S.weekly.postCount += 1;
+  S.meetPoints += 2;
   triggerNpcMessage("post");
   // 发动态触发后援会"新内容"反应
   const fc = D.fansp_n[Math.floor(Math.random()*D.fansp_n.length)];
@@ -471,9 +589,11 @@ function render() {
     { id: "home",     name: "首页",   svg: '<path d="M3 12L12 4l9 8M5 10v10h14V10"/>' },
     { id: "train",    name: "养成",   svg: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>' },
     { id: "schedule", name: "行程",   svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' },
+    { id: "album",    name: "专辑",   svg: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>' },
     { id: "message",  name: "消息",   svg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
     { id: "social",   name: "社交",   svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>' },
-    { id: "shop",     name: "商城",   svg: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>' }
+    { id: "shop",     name: "商城",   svg: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>' },
+    { id: "trophy",   name: "成就",   svg: '<path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/><path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/><path d="M6 3v9a6 6 0 0 0 12 0V3"/><path d="M9 21h6M12 17v4"/>' }
   ];
   const unread = (S.messages||[]).filter(m => !m.read).length;
   document.querySelector("#tabbar").innerHTML = tabs.map(n => {
@@ -485,14 +605,16 @@ function render() {
     </button>`;
   }).join("");
 
-  // 主体
+// 主体
   const m = document.querySelector("#main");
   if (S.page === "home")     m.innerHTML = renderHome();
   if (S.page === "train")    m.innerHTML = renderTrain();
   if (S.page === "schedule") m.innerHTML = renderSchedule();
+  if (S.page === "album")    m.innerHTML = renderAlbum();
   if (S.page === "message")  m.innerHTML = renderMessages();
   if (S.page === "social")   m.innerHTML = renderSocial();
   if (S.page === "shop")     m.innerHTML = renderShop();
+  if (S.page === "trophy")   m.innerHTML = renderTrophy();
 
   if (S.page === "home") {
     const cv = document.querySelector("#radar");
@@ -552,13 +674,17 @@ function renderHome() {
     ${ending ? `<div class="card" style="border:1.5px solid #ff3b7f"><h3 style="color:#ff3b7f">🎬 ${ending.title}</h3><div style="font-size:13px;color:#555;line-height:1.6">${ending.desc}</div></div>` : ""}
 
     <div class="card">
-      <h3>玩法提示</h3>
-      <div style="font-size:12px;color:#6b6b70;line-height:1.9">
-        · <b>养成</b>：用体力训练，提升四维属性<br>
-        · <b>行程</b>：接通告涨粉赚钱（消耗体力+天数）<br>
-        · <b>社交</b>：发动态保热度、看后援会消息<br>
-        · <b>商城</b>：用金币买奢侈品堆曝光<br>
-        · 关键属性达标会触发剧情，影响结局
+      <h3>数据总览</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
+        <div><span style="color:#8e8e93">打榜积分</span><br><b style="font-size:18px">${fmt(S.chartScore)}</b></div>
+        <div><span style="color:#8e8e93">专辑数</span><br><b style="font-size:18px">${S.albums.length}</b></div>
+        <div><span style="color:#8e8e93">奖项</span><br><b style="font-size:18px">${S.awards.length}</b></div>
+        <div><span style="color:#8e8e93">收藏品</span><br><b style="font-size:18px">${S.collections.length}/${D.collectibles.length}</b></div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn ghost" onclick="doCheckin()">${S.lastCheckinDay>=S.day?'✅ 已签到':'📅 签到'} (${S.checkinStreak}天)</button>
+        <button class="btn ghost" onclick="toggleDnd()">${S.dnd?'🔕 免打扰已开':'🔔 免打扰'}</button>
+        ${S.running ? '' : `<button class="btn ghost" onclick="endGameManual()">🎬 主动谢幕</button>`}
       </div>
     </div>
   `;
@@ -631,6 +757,99 @@ function renderSchedule() {
     <div class="page-sub">接通告攒粉丝，跑通告赚金币</div>
     ${running}
     <div class="card">${items}</div>
+  `;
+}
+
+function renderAlbum() {
+  const myAlbums = S.albums.length > 0
+    ? S.albums.slice().reverse().map(a => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);font-size:13px"><span>${a.name}</span><span style="color:#a1a1aa;font-size:11px">Day ${a.day}</span></div>`).join("")
+    : `<div style="color:#a1a1aa;text-align:center;padding:16px;font-size:12px">还没发过专辑</div>`;
+  const items = D.album_types.map(al => {
+    const req = checkRequires(al.requires);
+    const canCoin = S.res.coin >= al.cost;
+    const reqTags = req.missing.map(m => `<span class="tag fail">需 ${m}</span>`).join("");
+    return `
+      <div class="row">
+        <div class="info">
+          <div class="nm">${al.name}</div>
+          <div class="desc">${al.desc}</div>
+          <div class="tags">
+            <span class="tag">${al.cost}金币</span>
+            <span class="tag">${al.duration}天</span>
+            <span class="tag met">${formatGain(al.gain)}</span>
+            ${reqTags}
+          </div>
+        </div>
+        <button class="btn" ${req.ok&&canCoin&&!S.running?"":"disabled"} onclick="startAlbum('${al.id}')">制作</button>
+      </div>
+    `;
+  }).join("");
+  return `
+    <div class="page-title">专辑制作</div>
+    <div class="page-sub">已发布 ${S.albums.length} 张 · 选题决定走向</div>
+    <div class="card"><h3>已发布</h3>${myAlbums}</div>
+    <div class="card">${items}</div>
+  `;
+}
+
+function renderTrophy() {
+  // 成就
+  const unlocked = D.achievements.filter(a => S.achievements.includes(a.id));
+  const locked   = D.achievements.filter(a => !S.achievements.includes(a.id));
+  const achItems = [
+    ...unlocked.map(a => `
+      <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04)">
+        <div style="font-size:22px;line-height:1">${a.icon}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:#f43f5e">${a.name}</div>
+          <div style="font-size:11px;color:#71717a;margin-top:2px">${a.desc}</div>
+        </div>
+        <div style="font-size:10px;color:#16a34a;align-self:center">✓ 已达成</div>
+      </div>
+    `),
+    ...locked.map(a => `
+      <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);opacity:0.4">
+        <div style="font-size:22px;line-height:1;filter:grayscale(1)">${a.icon}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:500">${a.name}</div>
+          <div style="font-size:11px;color:#71717a;margin-top:2px">${a.desc}</div>
+        </div>
+      </div>
+    `)
+  ].join("");
+
+  // 奖项
+  const awItems = S.awards.length > 0
+    ? S.awards.slice().reverse().map(a => `<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.04);font-size:13px"><span style="font-size:18px">${a.icon}</span><span style="flex:1">${a.name}</span><span style="font-size:11px;color:#a1a1aa">Day ${a.day}</span></div>`).join("")
+    : `<div style="color:#a1a1aa;text-align:center;padding:12px;font-size:12px">还没拿到奖项</div>`;
+
+  // 收藏品
+  const colItems = D.collectibles.map(c => {
+    const has = S.collections.includes(c.id);
+    return `
+      <div style="text-align:center;padding:10px;border-radius:12px;background:${has?'rgba(244,63,94,0.1)':'rgba(0,0,0,0.03)'};opacity:${has?1:0.35}">
+        <div style="font-size:28px">${c.icon}</div>
+        <div style="font-size:11px;font-weight:500;margin-top:4px">${c.name}</div>
+        <div style="font-size:9px;color:#a1a1aa;margin-top:2px">${has?c.desc:'未获得'}</div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div class="page-title">成就 · 奖项 · 收藏</div>
+    <div class="page-sub">${S.achievements.length}/${D.achievements.length} 成就 · ${S.awards.length} 奖项 · ${S.collections.length}/${D.collectibles.length} 收藏品</div>
+    <div class="card">
+      <h3>🏆 成就徽章</h3>
+      ${achItems}
+    </div>
+    <div class="card">
+      <h3>🎖️ 奖项记录</h3>
+      ${awItems}
+    </div>
+    <div class="card">
+      <h3>🎁 收藏品</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${colItems}</div>
+    </div>
   `;
 }
 
@@ -750,6 +969,10 @@ window.advanceSchedule = advanceSchedule;
 window.doPost = doPost;
 window.buyItem = buyItem;
 window.navigate = navigate;
+window.doCheckin = doCheckin;
+window.startAlbum = startAlbum;
+window.toggleDnd = () => { S.dnd=!S.dnd; saveState(); render(); };
+window.endGameManual = () => { if(!confirm('确定谢幕吗？要主动结束生涯。'))return; S.ended='ending_retire'; saveState(); render(); };
 window.resetState = resetState;
 window.toggleLog = toggleLog;
 

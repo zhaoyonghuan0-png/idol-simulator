@@ -226,5 +226,64 @@ window.GAME_DATA = {
     { from: "media", trigger: "fans_milestone", text: "想做一个专访，主题是你这一年成长，方便约个时间吗？" },
     { from: "media", trigger: "post",           text: "刚转了你的动态，关注度涨得很快，建议保持节奏。" },
     { from: "media", trigger: "stress_high",    text: "听说你最近超负荷，要注意黑稿可能借机抹黑，提前打个招呼。" }
+  ],
+
+  // 成就系统（里程碑徽章，条件检测，一次性解锁）
+  achievements: [
+    { id: "a_train10",   name: "勤奋练习生",   desc: "完成10次训练",     icon: "🔥" },
+    { id: "a_sched5",    name: "通告狂魔",     desc: "完成5次行程",     icon: "🎤" },
+    { id: "a_fans10k",   name: "人气初起",     desc: "粉丝突破1万",     icon: "⭐" },
+    { id: "a_fans100k",  name: "小有名气",     desc: "粉丝突破10万",    icon: "🌟" },
+    { id: "a_fans1m",    name: "明日之星",     desc: "粉丝突破100万",   icon: "💫" },
+    { id: "a_fans10m",   name: "顶流巨星",     desc: "粉丝突破1000万",  icon: "👑" },
+    { id: "a_album1",    name: "首发之作",     desc: "发布第1张专辑",   icon: "💿" },
+    { id: "a_album5",    name: "高产艺术家",   desc: "累计发布5张专辑", icon: "📀" },
+    { id: "a_award1",    name: "初获殊荣",     desc: "获得第1个奖项",   icon: "🏆" },
+    { id: "a_award5",    name: "奖项收割机",   desc: "累计获得5个奖项", icon: "🏅" },
+    { id: "a_master",    name: "宗师境界",     desc: "任意属性达到宗师 Lv.8", icon: "🧘" },
+    { id: "a_collect5",  name: "收藏达人",     desc: "收集5件收藏品",   icon: "🎁" },
+    { id: "a_chart1",    name: "榜上有名",     desc: "打榜积分达到1000",icon: "📊" },
+    { id: "a_chart10k",  name: "榜单王者",     desc: "打榜积分达到10000",icon: "📈" },
+    { id: "a_checkin7",  name: "持之以恒",     desc: "累计签到7天",     icon: "📅" },
+    { id: "a_post50",    name: "社交达人",     desc: "累计发布50条动态",icon: "💬" },
+    { id: "a_coin100k",  name: "身价百万",     desc: "累计金币超10万",  icon: "💰" },
+    { id: "a_meet100",   name: "粉丝之心",     desc: "见面会积分达100", icon: "💖" }
+  ],
+
+  // 周任务（每周一刷新）
+  weekly_tasks: [
+    { id: "w_train30",   name: "本周完成30次训练",   target: { trainCount: 30 }, reward: { fans: 50000, coin: 5000 } },
+    { id: "w_sched10",   name: "本周完成10次行程",   target: { schedCount: 10 }, reward: { fans: 100000, coin: 10000 } },
+    { id: "w_post10",    name: "本周发布10条动态",   target: { postCount: 10 },  reward: { fans: 20000, coin: 3000 } }
+  ],
+
+  // 专辑预设（可发布的专辑题材，决定销量基数）
+  album_types: [
+    { id: "alb_ballad",  name: "抒情专辑",     desc: "走心的情歌路线",       cost: 3000,  duration: 7,  requires: { vocal: 40, create: 30 },   gain: { fans: 80000,  coin: 5000,  reputation: 6, stress: 25 } },
+    { id: "alb_dance",   name: "舞曲专辑",     desc: "高燃舞台向，洗脑节奏", cost: 4000,  duration: 8,  requires: { dance: 50, create: 30 },   gain: { fans: 120000, coin: 7000,  reputation: 5, stress: 28 } },
+    { id: "alb_concept", name: "概念专辑",     desc: "完整故事线，艺术性强", cost: 8000,  duration: 12, requires: { vocal: 65, create: 70 },   gain: { fans: 250000, coin: 18000, reputation: 15, stress: 35 } },
+    { id: "alb_remix",   name: "翻唱合辑",     desc: "致敬经典，话题度高",   cost: 1500,  duration: 5,  requires: { vocal: 30 },               gain: { fans: 30000,  coin: 2500,  reputation: 2, stress: 12 } }
+  ],
+
+  // 奖项预设（达成条件自动颁发）
+  awards: [
+    { id: "aw_rookie",     name: "年度新人奖",   icon: "🥉", cond: { fans: 100000 } },
+    { id: "aw_chart",      name: "数字音乐榜冠军", icon: "🥈", cond: { fans: 500000 } },
+    { id: "aw_charisma",   name: "最具人气艺人", icon: "💫", cond: { fans: 1000000, charm: 70 } },
+    { id: "aw_album",      name: "年度专辑奖",   icon: "💿", cond: { albumCount: 3 } },
+    { id: "aw_overseas",   name: "亚洲音乐节大奖", icon: "🌏", cond: { fans: 3000000 } },
+    { id: "aw_top",        name: "年度顶流",     icon: "👑", cond: { fans: 10000000 } }
+  ],
+
+  // 收藏品（随机活动掉落，无属性加成纯收集）
+  collectibles: [
+    { id: "col_signbook", name: "限定签名本",   icon: "📓", desc: "首演纪念，每张独一无二" },
+    { id: "col_lightstick", name: "应援棒升级版", icon: "🪄", desc: "粉丝送的镶钻款" },
+    { id: "col_concert_ticket", name: "首演门票", icon: "🎫", desc: "舞台生涯起点" },
+    { id: "col_award_medal", name: "新人奖奖牌", icon: "🏅", desc: "第一座奖" },
+    { id: "col_letter",   name: "粉丝手写信",   icon: "💌", desc: "厚厚一摞的爱" },
+    { id: "col_album_demo", name: "首张专辑母带", icon: "💽", desc: "录音棚原版" },
+    { id: "col_polaroid", name: "复古拍立得",   icon: "📷", desc: "成员合影" },
+    { id: "col_costume",  name: "舞台首战战服", icon: "👗", desc: "签上日期收藏" }
   ]
 };
