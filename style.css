@@ -380,7 +380,7 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; bac
 .create-wrap .card { width: 100%; }
 
 /* 分页向导：圆形导航按钮 */
-.create-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; }
+.create-nav { display: flex; align-items: center; justify-content: center; gap: 28px; margin-top: 22px; }
 .nav-circle {
   width: 56px; height: 56px; border-radius: 50%; border: none;
   display: flex; align-items: center; justify-content: center;
