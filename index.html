@@ -2,30 +2,46 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>爱豆模拟器 · 偶像养成</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#ff6aa1">
+  <title>爱豆模拟器</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <span id="brand-name">新晋偶像</span>
-      <small id="day-info">Day 1</small>
-    </div>
-    <div class="actions">
-      <button onclick="resetState()">重新开始</button>
-    </div>
+  <!-- 渐变背景层 -->
+  <div class="bg-gradient"></div>
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <div class="bg-blob blob-3"></div>
+
+  <!-- 手机外壳 -->
+  <div class="phone">
+    <header class="topbar glass">
+      <div class="brand">
+        <div class="avatar"></div>
+        <div>
+          <div id="brand-name" class="name">新晋偶像</div>
+          <div id="day-info"   class="sub">Day 1 · STAR娱乐</div>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="resetState()" title="重新开始">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+    </header>
+
+    <div id="resbar" class="resbar"></div>
+
+    <main id="main" class="main"></main>
+
+    <nav id="tabbar" class="tabbar glass"></nav>
   </div>
 
-  <div id="resbar" class="resbar"></div>
-
-  <div class="layout">
-    <div id="sidebar" class="sidebar"></div>
-    <div id="main" class="main"></div>
-  </div>
-
-  <div id="log-panel">
-    <h4>动态日志 <button onclick="document.getElementById('log-panel').style.display='none'">×</button></h4>
+  <!-- 浮动日志（手机端在右下角小气泡） -->
+  <button id="log-toggle" class="log-toggle glass" onclick="toggleLog()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h.01M3 6h.01M3 18h.01M8 12h13M8 6h13M8 18h13"/></svg>
+  </button>
+  <div id="log-panel" class="log-panel glass" style="display:none">
+    <div class="log-head">动态日志<button class="close" onclick="toggleLog()">×</button></div>
     <div id="log-lines"></div>
   </div>
 

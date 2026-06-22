@@ -229,45 +229,26 @@ function checkDailyTasks() {
   }
 }
 
-// ===== 剧情模态 =====
-function showEventModal(ev) {
-  const bg = document.createElement("div");
-  bg.className = "modal-bg";
-  bg.innerHTML = `
-    <div class="modal">
-      <h2>${ev.title}</h2>
-      <div class="modal-desc">${ev.desc}</div>
-      <div class="options">
-        ${ev.options.map((o,i) => `<button class="opt-btn" data-idx="${i}">${o.label}</button>`).join("")}
-      </div>
-    </div>
-  `;
-  document.body.appendChild(bg);
-  bg.querySelectorAll(".opt-btn").forEach(b => {
-    b.addEventListener("click", () => {
-      const idx = parseInt(b.dataset.idx);
-      const opt = ev.options[idx];
-      applyGain(opt.effect, ev.title);
-      if (opt.flag) S.flags[opt.flag] = true;
-      log(`【剧情】${opt.log}`);
-      bg.remove();
-      saveState();
-      render();
-    });
-  });
-}
+// ===== 剧情模态（实现见文件末尾的玻璃风版本） =====
 
 // ===== 雷达图 =====
 function drawRadar(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 320;
+  const cssH = 200;
+  canvas.width  = cssW * dpr;
+  canvas.height = cssH * dpr;
+  canvas.style.height = cssH + "px";
   const ctx = canvas.getContext("2d");
-  const W = canvas.width = 280, H = canvas.height = 280;
-  const cx = W/2, cy = H/2, R = 100;
+  ctx.scale(dpr, dpr);
+  const W = cssW, H = cssH;
+  const cx = W/2, cy = H/2, R = Math.min(W, H)/2 - 30;
   ctx.clearRect(0, 0, W, H);
   const stats = D.theme.stats;
   const n = stats.length;
 
   // 背景网格
-  ctx.strokeStyle = "#e8e8e8";
+  ctx.strokeStyle = "rgba(0,0,0,0.06)";
   ctx.lineWidth = 1;
   for (let lvl = 1; lvl <= 4; lvl++) {
     const r = R * lvl / 4;
@@ -282,7 +263,7 @@ function drawRadar(canvas) {
   }
 
   // 轴线
-  ctx.strokeStyle = "#d0d0d0";
+  ctx.strokeStyle = "rgba(0,0,0,0.06)";
   for (let i = 0; i < n; i++) {
     const a = -Math.PI/2 + i * 2*Math.PI/n;
     ctx.beginPath(); ctx.moveTo(cx, cy);
@@ -291,8 +272,8 @@ function drawRadar(canvas) {
   }
 
   // 数据多边形
-  ctx.fillStyle = "rgba(255, 91, 138, 0.18)";
-  ctx.strokeStyle = "#ff5b8a";
+  ctx.fillStyle = "rgba(255, 107, 161, 0.15)";
+  ctx.strokeStyle = "#ff6aa1";
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let i = 0; i < n; i++) {
@@ -310,12 +291,12 @@ function drawRadar(canvas) {
     const v = (S.stats[stats[i].key] || 0) / 100;
     const a = -Math.PI/2 + i * 2*Math.PI/n;
     const x = cx + R*v*Math.cos(a), y = cy + R*v*Math.sin(a);
-    ctx.fillStyle = "#ff5b8a";
+    ctx.fillStyle = "#ff6aa1";
     ctx.beginPath(); ctx.arc(x, y, 3, 0, 2*Math.PI); ctx.fill();
   }
 
   // 标签
-  ctx.fillStyle = "#555"; ctx.font = "13px -apple-system";
+  ctx.fillStyle = "#8e8e93"; ctx.font = "12px -apple-system";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   for (let i = 0; i < n; i++) {
     const a = -Math.PI/2 + i * 2*Math.PI/n;
@@ -334,31 +315,33 @@ function render() {
   }
 
   // 顶栏
-  document.querySelector("#brand-name").textContent = S.name || D.theme.protagonist;
-  document.querySelector("#day-info").textContent = `Day ${S.day}`;
+  const bn = document.querySelector("#brand-name");
+  if (bn) bn.textContent = S.name || D.theme.protagonist;
+  const di = document.querySelector("#day-info");
+  if (di) di.textContent = `Day ${S.day} · ${D.theme.company}`;
 
   // 资源条
   const resBar = document.querySelector("#resbar");
   resBar.innerHTML = D.theme.resources.map(r => `
     <div class="item">
       <span class="lab">${r.name}</span>
-      <span class="val">${fmt(S.res[r.key])}${r.max?` / ${r.max}`:""}</span>
+      <span class="val">${fmt(S.res[r.key])}${r.max?`/${r.max}`:""}</span>
     </div>
   `).join("");
 
-  // 侧栏
-  const navs = [
+  // 底部 tab 栏
+  const tabs = [
     { id: "home",     name: "首页",   svg: '<path d="M3 12L12 4l9 8M5 10v10h14V10"/>' },
-    { id: "train",    name: "养成",   svg: '<path d="M6.5 6.5h11v11h-11z M9.5 9.5h5v5h-5z"/>' },
+    { id: "train",    name: "养成",   svg: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>' },
     { id: "schedule", name: "行程",   svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' },
     { id: "social",   name: "社交",   svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>' },
     { id: "shop",     name: "商城",   svg: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>' }
   ];
-  document.querySelector("#sidebar").innerHTML = navs.map(n => `
-    <div class="nav-item ${S.page===n.id?"active":""}" onclick="navigate('${n.id}')">
+  document.querySelector("#tabbar").innerHTML = tabs.map(n => `
+    <button class="tab-item ${S.page===n.id?"active":""}" onclick="navigate('${n.id}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${n.svg}</svg>
-      ${n.name}
-    </div>
+      <span>${n.name}</span>
+    </button>
   `).join("");
 
   // 主体
@@ -376,12 +359,16 @@ function render() {
 }
 
 function renderHome() {
-  const stats = D.theme.stats.map(s => `
-    <div>
-      <div class="stat-row"><span>${s.name}</span><b>${S.stats[s.key]}/100</b></div>
-      <div class="bar"><div style="width:${S.stats[s.key]}%"></div></div>
-    </div>
-  `).join("");
+  const statsHtml = D.theme.stats.map(s => {
+    const v = S.stats[s.key]||0;
+    return `
+      <div class="stat-block">
+        <div class="stat-label">${s.name}</div>
+        <div class="stat-num">${v}<span style="font-size:11px;color:#8e8e93;font-weight:500"> /100</span></div>
+        <div class="bar"><div style="width:${v}%"></div></div>
+      </div>
+    `;
+  }).join("");
 
   const tasks = D.daily_tasks.map(t => {
     const cur = Object.keys(t.target).map(k => S.daily[k]||0).reduce((a,b)=>a+b,0);
@@ -389,7 +376,10 @@ function renderHome() {
     const done = S.daily.claimed[t.id];
     return `
       <div class="task-row">
-        <div>${t.name} <span class="tag">奖励 ${formatGain(t.reward)}</span></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:500">${t.name}</div>
+          <div style="font-size:11px;color:#8e8e93;margin-top:2px">奖励 ${formatGain(t.reward)}</div>
+        </div>
         <div class="prog ${done?"done":""}">${done?"✓ 已领取":`${cur}/${need}`}</div>
       </div>
     `;
@@ -398,29 +388,30 @@ function renderHome() {
   const ending = S.ended ? D.endings.find(e => e.id === S.ended) : null;
 
   return `
-    <h2 class="page-title">${S.name || D.theme.protagonist} <span class="tag" style="margin-left:8px">${D.theme.company}</span></h2>
-    <p class="page-sub">${D.theme.subtitle}</p>
+    <div class="page-title">${S.name || D.theme.protagonist}</div>
+    <div class="page-sub">${D.theme.subtitle}</div>
 
-    <div class="dashboard">
-      <div class="card" style="padding:8px"><canvas id="radar"></canvas></div>
-      <div class="card stat-list">${stats}</div>
+    <div class="card dashboard">
+      <h3>四维属性 <span style="font-size:11px;color:#8e8e93;font-weight:400">Day ${S.day}</span></h3>
+      <canvas id="radar"></canvas>
+      <div class="stat-grid" style="margin-top:10px">${statsHtml}</div>
     </div>
 
     <div class="card">
-      <h3>每日任务（Day ${S.day}）</h3>
+      <h3>每日任务</h3>
       ${tasks}
     </div>
 
-    ${ending ? `<div class="card" style="border-color:var(--accent)"><h3>🎬 ${ending.title}</h3><p>${ending.desc}</p></div>` : ""}
+    ${ending ? `<div class="card" style="border:1.5px solid #ff3b7f"><h3 style="color:#ff3b7f">🎬 ${ending.title}</h3><div style="font-size:13px;color:#555;line-height:1.6">${ending.desc}</div></div>` : ""}
 
     <div class="card">
-      <h3>新手提示</h3>
-      <div style="font-size:13px;color:var(--muted);line-height:1.8">
-        · 在 <b>养成</b> 提升四维属性<br>
-        · 在 <b>行程</b> 接通告涨粉赚钱（消耗体力+天数）<br>
-        · 在 <b>社交</b> 发动态保持热度、看后援会消息<br>
-        · 在 <b>商城</b> 用金币买奢侈品堆曝光<br>
-        · 达到关键属性会触发剧情事件，影响结局走向
+      <h3>玩法提示</h3>
+      <div style="font-size:12px;color:#6b6b70;line-height:1.9">
+        · <b>养成</b>：用体力训练，提升四维属性<br>
+        · <b>行程</b>：接通告涨粉赚钱（消耗体力+天数）<br>
+        · <b>社交</b>：发动态保热度、看后援会消息<br>
+        · <b>商城</b>：用金币买奢侈品堆曝光<br>
+        · 关键属性达标会触发剧情，影响结局
       </div>
     </div>
   `;
@@ -429,23 +420,23 @@ function renderHome() {
 function renderTrain() {
   const items = D.trainings.map(t => {
     const can = t.cost <= 0 || S.res.energy >= t.cost;
+    const tag = t.cost > 0
+      ? `<span class="tag">体力 -${t.cost}</span>`
+      : `<span class="tag met">体力 +${-t.cost}</span>`;
     return `
       <div class="row">
         <div class="info">
-          <div class="name">${t.name}</div>
+          <div class="nm">${t.name}</div>
           <div class="desc">${t.desc}</div>
-          <div style="margin-top:6px">
-            ${t.cost>0?`<span class="tag">消耗体力 ${t.cost}</span>`:`<span class="tag">恢复体力 ${-t.cost}</span>`}
-            <span class="tag">收益 ${formatGain(t.gain) || "-"}</span>
-          </div>
+          <div class="tags">${tag}${Object.keys(t.gain).length?`<span class="tag met">${formatGain(t.gain)}</span>`:""}</div>
         </div>
         <button class="btn" ${can?"":"disabled"} onclick="doTrain('${t.id}')">开始</button>
       </div>
     `;
   }).join("");
   return `
-    <h2 class="page-title">养成训练</h2>
-    <p class="page-sub">提升四维属性，解锁更高级行程</p>
+    <div class="page-title">养成训练</div>
+    <div class="page-sub">提升属性，解锁更高级行程</div>
     <div class="card">${items}</div>
   `;
 }
@@ -458,12 +449,12 @@ function renderSchedule() {
     const pct = ((S.running.duration - left) / S.running.duration) * 100;
     running = `
       <div class="card schedule-running">
-        <h3>正在进行：${sc.name}</h3>
-        <div class="desc" style="color:#666">${sc.desc}</div>
-        <div class="progress"><div style="width:${pct}%"></div></div>
+        <h3>进行中：${sc.name}</h3>
+        <div style="font-size:12px;color:#666">${sc.desc}</div>
+        <div class="pbar"><div style="width:${pct}%"></div></div>
         <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:12px;color:var(--muted)">剩余 ${left} 天</span>
-          <button class="btn ghost" onclick="advanceSchedule()">推进 1 天</button>
+          <span style="font-size:12px;color:#8e8e93">剩余 ${left} 天</span>
+          <button class="btn" onclick="advanceSchedule()">推进 1 天</button>
         </div>
       </div>
     `;
@@ -471,16 +462,17 @@ function renderSchedule() {
   const items = D.schedules.map(sc => {
     const req = checkRequires(sc.requires);
     const canEnergy = S.res.energy >= sc.cost;
+    const reqTags = req.missing.map(m => `<span class="tag fail">需 ${m}</span>`).join("");
     return `
       <div class="row">
         <div class="info">
-          <div class="name">${sc.name}</div>
+          <div class="nm">${sc.name}</div>
           <div class="desc">${sc.desc}</div>
-          <div style="margin-top:6px">
+          <div class="tags">
             <span class="tag">体力 ${sc.cost}</span>
             <span class="tag">${sc.duration}天</span>
-            <span class="tag">收益 ${formatGain(sc.gain)}</span>
-            ${req.missing.map(m => `<span class="tag req-fail">需 ${m}</span>`).join("")}
+            <span class="tag met">${formatGain(sc.gain)}</span>
+            ${reqTags}
           </div>
         </div>
         <button class="btn" ${req.ok&&canEnergy&&!S.running?"":"disabled"} onclick="startSchedule('${sc.id}')">出发</button>
@@ -488,8 +480,8 @@ function renderSchedule() {
     `;
   }).join("");
   return `
-    <h2 class="page-title">行程</h2>
-    <p class="page-sub">接通告攒粉丝，跑通告赚金币</p>
+    <div class="page-title">行程</div>
+    <div class="page-sub">接通告攒粉丝，跑通告赚金币</div>
     ${running}
     <div class="card">${items}</div>
   `;
@@ -497,21 +489,24 @@ function renderSchedule() {
 
 function renderSocial() {
   const myPosts = [...S.posts].reverse().slice(0, 10).map(p => `
-    <div class="row"><div class="info"><div class="name">Day ${p.day}</div><div class="desc">${p.text}</div></div></div>
-  `).join("") || `<div style="color:var(--muted);padding:20px;text-align:center">还没发过动态</div>`;
-
-  const chats = [...S.chats].slice(-15).map(c => `
-    <div class="chat-msg">
-      <div class="avatar">${c.name[3]||c.name[0]}</div>
-      <div class="bubble"><div class="nm">${c.name} · Day ${c.day}</div>${c.text}</div>
+    <div class="post-item">
+      <div class="day">Day ${p.day}</div>
+      <div class="txt">${p.text}</div>
     </div>
-  `).join("") || `<div style="color:var(--muted);padding:20px;text-align:center">后援会还没消息</div>`;
+  `).join("") || `<div style="color:#8e8e93;padding:16px 0;text-align:center;font-size:12px">还没发过动态</div>`;
+
+  const chats = [...S.chats].slice(-15).reverse().map(c => `
+    <div class="chat-msg">
+      <div class="ava">${c.name.slice(-1)}</div>
+      <div class="bub"><div class="nm">${c.name} · Day ${c.day}</div>${c.text}</div>
+    </div>
+  `).join("") || `<div style="color:#8e8e93;padding:16px 0;text-align:center;font-size:12px">后援会还没消息</div>`;
 
   return `
-    <h2 class="page-title">社交</h2>
-    <p class="page-sub">动态保热度，群聊看反馈</p>
+    <div class="page-title">社交</div>
+    <div class="page-sub">动态保热度，群聊看反馈</div>
     <div class="card">
-      <h3>我的动态 <button class="btn" style="float:right" onclick="doPost()">发动态（体力-5）</button></h3>
+      <h3>我的动态<button class="btn" onclick="doPost()">发动态 体力-5</button></h3>
       ${myPosts}
     </div>
     <div class="card">
@@ -527,11 +522,11 @@ function renderShop() {
     return `
       <div class="row">
         <div class="info">
-          <div class="name">${item.name}</div>
+          <div class="nm">${item.name}</div>
           <div class="desc">${item.desc}</div>
-          <div style="margin-top:6px">
-            <span class="tag">${item.price} 金币</span>
-            <span class="tag">效果 ${formatGain(item.gain)}</span>
+          <div class="tags">
+            <span class="tag">${fmt(item.price)} 金币</span>
+            <span class="tag met">${formatGain(item.gain)}</span>
           </div>
         </div>
         <button class="btn" ${can?"":"disabled"} onclick="buyItem('${item.id}')">购买</button>
@@ -539,13 +534,45 @@ function renderShop() {
     `;
   }).join("");
   return `
-    <h2 class="page-title">商城</h2>
-    <p class="page-sub">用金币买曝光与属性</p>
+    <div class="page-title">商城</div>
+    <div class="page-sub">金币买曝光与属性</div>
     <div class="card">${items}</div>
   `;
 }
 
 function navigate(page) { S.page = page; saveState(); render(); }
+function toggleLog() {
+  const p = document.querySelector("#log-panel");
+  p.style.display = p.style.display === "none" ? "block" : "none";
+}
+
+// ===== 剧情模态 — 重写为玻璃风 =====
+function showEventModal(ev) {
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.innerHTML = `
+    <div class="modal">
+      <h2>${ev.title}</h2>
+      <div class="mdesc">${ev.desc}</div>
+      <div class="opts">
+        ${ev.options.map((o,i) => `<button class="opt" data-idx="${i}">${o.label}</button>`).join("")}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(bg);
+  bg.querySelectorAll(".opt").forEach(b => {
+    b.addEventListener("click", () => {
+      const idx = parseInt(b.dataset.idx);
+      const opt = ev.options[idx];
+      applyGain(opt.effect, ev.title);
+      if (opt.flag) S.flags[opt.flag] = true;
+      log(`【剧情】${opt.log}`);
+      bg.remove();
+      saveState();
+      render();
+    });
+  });
+}
 
 // ===== 启动 =====
 window.doTrain = doTrain;
@@ -555,6 +582,7 @@ window.doPost = doPost;
 window.buyItem = buyItem;
 window.navigate = navigate;
 window.resetState = resetState;
+window.toggleLog = toggleLog;
 
 function init() {
   if (!S.name) {
