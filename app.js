@@ -8,6 +8,10 @@ const defaultState = () => {
   D.theme.resources.forEach(r => res[r.key] = r.init);
   return {
     name: "",
+    gender: "",
+    appearance: "",
+    debutType: "solo",
+    created: false,
     stats, res,
     day: 1,
     flags: {},
@@ -45,7 +49,8 @@ function resetState() {
   if (!confirm("重新开始？当前存档将被清除。")) return;
   localStorage.removeItem(SAVE_KEY);
   S = defaultState();
-  render();
+  createState = { name: "", gender: "female", appearance: "", debutType: "solo" };
+  renderCreate();
 }
 
 // ===== 工具 =====
@@ -1021,17 +1026,104 @@ window.endGameManual = () => { if(!confirm('确定谢幕吗？要主动结束生
 window.dismissHelp = () => { S.flags.dismissHelp = true; saveState(); render(); };
 window.resetState = resetState;
 window.toggleLog = toggleLog;
+window.setCreate = setCreate;
+window.finishCreate = finishCreate;
 
-function init() {
-  if (!S.name) {
-    setTimeout(() => {
-      const n = prompt("给你的偶像起个艺名吧：", "");
-      if (n) { S.name = n.trim(); saveState(); render(); }
-      else { S.name = D.theme.protagonist; saveState(); render(); }
-    }, 200);
-  }
+// ===== 角色创建页 =====
+let createState = { name: "", gender: "female", appearance: "", debutType: "solo" };
+
+function setCreate(key, val) {
+  // 重渲染前先同步 input 当前值，避免重建 DOM 冲掉用户输入的艺名
+  const inp = document.querySelector("#ci-name");
+  if (inp) createState.name = inp.value;
+  createState[key] = val;
+  renderCreate();
+}
+
+function renderCreate() {
+  // 创建阶段隐藏顶栏/资源条/tab栏
+  document.querySelector(".topbar").style.display = "none";
+  document.querySelector("#resbar").style.display = "none";
+  document.querySelector("#tabbar").style.display = "none";
+  const c = createState;
+  const apps = D.theme.appearances;
+  const debuts = D.theme.debutTypes;
+  const m = document.querySelector("#main");
+  m.innerHTML = `
+    <div class="page-title">创建你的偶像</div>
+    <div class="page-sub">起个艺名，选定形象，开启出道之路</div>
+
+    <div class="card">
+      <h3>艺名</h3>
+      <input id="ci-name" class="create-input" placeholder="给自己起个艺名" maxlength="12" value="${c.name}">
+    </div>
+
+    <div class="card">
+      <h3>性别</h3>
+      <div class="seg">
+        <button class="seg-btn ${c.gender==='female'?'on':''}" onclick="setCreate('gender','female')">女</button>
+        <button class="seg-btn ${c.gender==='male'?'on':''}" onclick="setCreate('gender','male')">男</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>形象风格 <span style="font-size:11px;color:#8e8e93;font-weight:400">影响初始属性</span></h3>
+      <div class="chip-row">
+        ${apps.map(a => `
+          <button class="chip ${c.appearance===a.k?'on':''}" onclick="setCreate('appearance','${a.k}')">
+            <div class="chip-n">${a.name}</div>
+            <div class="chip-d">${a.desc}</div>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>出道方式</h3>
+      <div class="seg">
+        ${debuts.map(d => `
+          <button class="seg-btn ${c.debutType===d.k?'on':''}" onclick="setCreate('debutType','${d.k}')">${d.name}</button>
+        `).join("")}
+      </div>
+    </div>
+
+    <button class="btn" style="width:100%;margin-top:4px" onclick="finishCreate()">开始出道 →</button>
+  `;
+}
+
+function finishCreate() {
+  const inp = document.querySelector("#ci-name");
+  let name = inp ? inp.value.trim() : "";
+  if (!name) name = D.theme.protagonist;
+  if (!createState.appearance) createState.appearance = D.theme.appearances[0].k;
+
+  S.name = name;
+  S.gender = createState.gender;
+  S.appearance = createState.appearance;
+  S.debutType = createState.debutType;
+  S.created = true;
+
+  // 形象风格初始加成
+  const app = D.theme.appearances.find(a => a.k === S.appearance);
+  if (app && app.bonus) applyGain(app.bonus, `形象加成·${app.name}`);
+
+  // 恢复 UI 框架
+  document.querySelector(".topbar").style.display = "";
+  document.querySelector("#resbar").style.display = "";
+  document.querySelector("#tabbar").style.display = "";
+  S.page = "home";
+  saveState();
   render();
-  // 加载存档时恢复自动推进
-  if (S.running) startAutoAdvance();
+}
+
+// ===== 启动 =====
+function init() {
+  // 没创建过且没艺名 → 进创建页；否则直接进游戏（兼容旧存档）
+  if (!S.created && !S.name) {
+    renderCreate();
+  } else {
+    render();
+    if (S.running) startAutoAdvance();
+  }
 }
 init();

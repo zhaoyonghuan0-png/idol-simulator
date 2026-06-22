@@ -22,6 +22,20 @@ window.GAME_DATA = {
       { key: "fans",     name: "粉丝",     max: null, init: 0 },
       { key: "coin",     name: "金币",     max: null, init: 500 },
       { key: "exposure", name: "曝光度",   max: 100, init: 10 }
+    ],
+    // 形象风格 — 创建角色时选，每个带初始加成（改主题时换成"硬汉/儒雅/书卷"等）
+    appearances: [
+      { k: "sweet",   name: "甜美系", desc: "邻家亲和，路人缘好",  bonus: { charm: 5, reputation: 5 } },
+      { k: "cool",    name: "酷飒系", desc: "气场全开，自带话题",  bonus: { charm: 6, exposure: 3 } },
+      { k: "pure",    name: "清纯系", desc: "干净透明，粉丝黏性高", bonus: { charm: 4, fans: 2000 } },
+      { k: "mature",  name: "御姐系", desc: "成熟有质感，代言青睐", bonus: { charm: 6, coin: 500 } },
+      { k: "sunny",   name: "阳光系", desc: "元气满满，体力充沛",  bonus: { charm: 4, energy: 15 } },
+      { k: "mystery", name: "神秘系", desc: "高冷神秘，曝光加成",  bonus: { charm: 5, exposure: 5 } }
+    ],
+    // 出道方式
+    debutTypes: [
+      { k: "solo",  name: "solo 单人", desc: "单枪匹马闯荡，资源独享" },
+      { k: "group", name: "团体出道", desc: "组团出发，互相成就" }
     ]
   },
 
