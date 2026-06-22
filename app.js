@@ -1058,6 +1058,7 @@ function renderCreate() {
   document.querySelector(".topbar").style.display = "none";
   document.querySelector("#resbar").style.display = "none";
   document.querySelector("#tabbar").style.display = "none";
+  document.querySelector("#main").classList.add("create-mode");
   const c = createState;
   const apps = D.theme.appearances;
   const debuts = D.theme.debutTypes;
@@ -1150,6 +1151,7 @@ function finishCreate() {
   document.querySelector(".topbar").style.display = "";
   document.querySelector("#resbar").style.display = "";
   document.querySelector("#tabbar").style.display = "";
+  document.querySelector("#main").classList.remove("create-mode");
   S.page = "home";
   saveState();
   render();

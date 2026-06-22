@@ -361,16 +361,23 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; bac
 .chip-d { font-size: 11px; color: #71717a; margin-top: 2px; line-height: 1.4; }
 .chip.on .chip-n { color: #f43f5e; }
 
-/* 创建页：垂直水平居中 */
-.create-wrap {
-  min-height: calc(100% + 80px);   /* 抵消 main 的 padding-bottom，让居中点回到视觉中心 */
+/* 创建页：垂直水平居中（main 变 flex 容器，避开百分比高度坑）*/
+.main.create-mode {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding-bottom: 10px;   /* 创建页无 tabbar，去掉为 tabbar 预留的 90px */
   text-align: center;
+}
+.create-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 .create-wrap .page-title { margin-top: 0; }
 .create-wrap .create-input { text-align: center; }
+.create-wrap .card { width: 100%; }
 
 /* 分页向导：圆形导航按钮 */
 .create-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; }
