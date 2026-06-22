@@ -586,20 +586,17 @@ function render() {
     </div>
   `).join("");
 
-  // 底部 tab 栏
+  // 底部 tab 栏（5个主tab，参考原站，其他功能进"更多"页）
   const tabs = [
     { id: "home",     name: "首页",   svg: '<path d="M3 12L12 4l9 8M5 10v10h14V10"/>' },
     { id: "train",    name: "养成",   svg: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>' },
     { id: "schedule", name: "行程",   svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' },
-    { id: "album",    name: "专辑",   svg: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>' },
-    { id: "message",  name: "消息",   svg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
-    { id: "social",   name: "社交",   svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>' },
-    { id: "shop",     name: "商城",   svg: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>' },
-    { id: "trophy",   name: "成就",   svg: '<path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/><path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/><path d="M6 3v9a6 6 0 0 0 12 0V3"/><path d="M9 21h6M12 17v4"/>' }
+    { id: "social",   name: "动态",   svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>' },
+    { id: "more",     name: "更多",   svg: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>' }
   ];
   const unread = (S.messages||[]).filter(m => !m.read).length;
   document.querySelector("#tabbar").innerHTML = tabs.map(n => {
-    const badge = (n.id === "message" && unread > 0) ? `<span class="tab-badge">${unread}</span>` : "";
+    const badge = (n.id === "more" && unread > 0) ? `<span class="tab-badge">${unread}</span>` : "";
     return `
     <button class="tab-item ${S.page===n.id?"active":""}" onclick="navigate('${n.id}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${n.svg}</svg>
@@ -612,9 +609,10 @@ function render() {
   if (S.page === "home")     m.innerHTML = renderHome();
   if (S.page === "train")    m.innerHTML = renderTrain();
   if (S.page === "schedule") m.innerHTML = renderSchedule();
+  if (S.page === "social")   m.innerHTML = renderSocial();
+  if (S.page === "more")     m.innerHTML = renderMore();
   if (S.page === "album")    m.innerHTML = renderAlbum();
   if (S.page === "message")  m.innerHTML = renderMessages();
-  if (S.page === "social")   m.innerHTML = renderSocial();
   if (S.page === "shop")     m.innerHTML = renderShop();
   if (S.page === "trophy")   m.innerHTML = renderTrophy();
 
@@ -627,6 +625,40 @@ function render() {
     (S.messages||[]).forEach(m => m.read = true);
     saveState();
   }
+}
+
+function renderMore() {
+  const items = [
+    { id: "album",   name: "专辑制作",   icon: "💿", desc: "发布专辑，提升打榜排名" },
+    { id: "shop",    name: "商城",       icon: "🛒", desc: "购买道具提升属性" },
+    { id: "message", name: "消息",       icon: "💬", desc: `经纪人、品牌方、后援会私信${(S.messages||[]).filter(m=>!m.read).length ? ' (未读)' : ''}` },
+    { id: "trophy",  name: "成就奖项",   icon: "🏆", desc: `${S.achievements.length}/${D.achievements.length} 成就 · ${S.awards.length} 奖项` },
+    { id: "home",    name: "数据总览",   icon: "📊", desc: `榜分 ${fmt(S.chartScore)} · 签到 ${S.checkinStreak}天 · 收藏 ${S.collections.length}` }
+  ];
+  return `
+    <div class="page-title">更多功能</div>
+    <div class="page-sub">专辑、商城、消息、成就、数据</div>
+    <div class="card">
+      ${items.map(it => `
+        <div class="row" onclick="navigate('${it.id}')" style="cursor:pointer">
+          <div style="font-size:28px;width:44px;text-align:center">${it.icon}</div>
+          <div class="info">
+            <div class="nm">${it.name}</div>
+            <div class="desc">${it.desc}</div>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:#a1a1aa"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      `).join("")}
+    </div>
+    <div class="card">
+      <h3>快捷操作</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn ghost" onclick="doCheckin()">${S.lastCheckinDay>=S.day?'✅ 已签到':'📅 签到'}</button>
+        <button class="btn ghost" onclick="toggleDnd()">${S.dnd?'🔕 免打扰':'🔔 免打扰'}</button>
+        ${S.running ? '' : '<button class="btn ghost" onclick="endGameManual()">🎬 谢幕</button>'}
+      </div>
+    </div>
+  `;
 }
 
 function renderHome() {
@@ -657,10 +689,26 @@ function renderHome() {
   }).join("");
 
   const ending = S.ended ? D.endings.find(e => e.id === S.ended) : null;
+  const showHelp = !S.flags.dismissHelp;
 
   return `
     <div class="page-title">${S.name || D.theme.protagonist}</div>
     <div class="page-sub">${D.theme.subtitle}</div>
+
+    ${showHelp ? `
+    <div class="card" style="border:1.5px solid #f43f5e;background:linear-gradient(135deg,rgba(244,63,94,0.08),rgba(245,158,11,0.06))">
+      <h3>🎬 怎么玩 <button onclick="dismissHelp()" style="font-size:11px;background:none;border:none;color:#a1a1aa">隐藏 ×</button></h3>
+      <div style="font-size:12px;color:#52525b;line-height:1.8">
+        <b>核心循环</b>：<br>
+        ① <b>养成</b>页 → 训练（耗体力，加属性、压力）<br>
+        ② <b>行程</b>页 → 接通告（耗体力+天数 → 涨粉+赚钱，自动跑）<br>
+        ③ 压力高了 → 回养成"心理疏导"或"休息"<br>
+        ④ <b>动态</b>页 → 发动态加粉、看后援会聊天<br>
+        ⑤ <b>更多</b>页 → 专辑/商城/消息/成就/谢幕<br><br>
+        <b>目标</b>：用 100~300 天达到不同结局（粉丝量+属性组合决定走哪条结局线）。
+      </div>
+    </div>
+    ` : ""}
 
     <div class="card dashboard">
       <h3>四维属性 <span style="font-size:11px;color:#8e8e93;font-weight:400">Day ${S.day}</span></h3>
@@ -673,7 +721,7 @@ function renderHome() {
       ${tasks}
     </div>
 
-    ${ending ? `<div class="card" style="border:1.5px solid #ff3b7f"><h3 style="color:#ff3b7f">🎬 ${ending.title}</h3><div style="font-size:13px;color:#555;line-height:1.6">${ending.desc}</div></div>` : ""}
+    ${ending ? `<div class="card" style="border:1.5px solid #f43f5e"><h3 style="color:#f43f5e">🎬 ${ending.title}</h3><div style="font-size:13px;color:#555;line-height:1.6">${ending.desc}</div></div>` : ""}
 
     <div class="card">
       <h3>数据总览</h3>
@@ -682,11 +730,6 @@ function renderHome() {
         <div><span style="color:#8e8e93">专辑数</span><br><b style="font-size:18px">${S.albums.length}</b></div>
         <div><span style="color:#8e8e93">奖项</span><br><b style="font-size:18px">${S.awards.length}</b></div>
         <div><span style="color:#8e8e93">收藏品</span><br><b style="font-size:18px">${S.collections.length}/${D.collectibles.length}</b></div>
-      </div>
-      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn ghost" onclick="doCheckin()">${S.lastCheckinDay>=S.day?'✅ 已签到':'📅 签到'} (${S.checkinStreak}天)</button>
-        <button class="btn ghost" onclick="toggleDnd()">${S.dnd?'🔕 免打扰已开':'🔔 免打扰'}</button>
-        ${S.running ? '' : `<button class="btn ghost" onclick="endGameManual()">🎬 主动谢幕</button>`}
       </div>
     </div>
   `;
@@ -975,6 +1018,7 @@ window.doCheckin = doCheckin;
 window.startAlbum = startAlbum;
 window.toggleDnd = () => { S.dnd=!S.dnd; saveState(); render(); };
 window.endGameManual = () => { if(!confirm('确定谢幕吗？要主动结束生涯。'))return; S.ended='ending_retire'; saveState(); render(); };
+window.dismissHelp = () => { S.flags.dismissHelp = true; saveState(); render(); };
 window.resetState = resetState;
 window.toggleLog = toggleLog;
 
