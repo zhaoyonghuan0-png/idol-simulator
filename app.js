@@ -85,22 +85,78 @@ function getLevel(value) {
   return lv;
 }
 
-// NPC 消息触发器 — 按事件随机选 1 条消息
+// NPC 消息触发器 — 优先用 AI 实时生成，失败就用预写池
 function triggerNpcMessage(eventType) {
   const pool = D.npc_messages.filter(m => m.trigger === eventType);
   if (pool.length === 0) return;
+  // 随机挑一个 NPC（按这个 event 池里的 from 分布）
   const msg = pool[Math.floor(Math.random() * pool.length)];
   const npc = D.npcs.find(n => n.id === msg.from);
   if (!npc) return;
-  S.messages.unshift({
-    from: msg.from,
-    fromName: npc.name,
-    color: npc.color,
-    text: msg.text,
-    day: S.day,
-    read: false
-  });
+
+  // 先用预写文案占位（万一 AI 失败/慢也能玩）
+  const placeholder = {
+    from: msg.from, fromName: npc.name, color: npc.color,
+    text: msg.text, day: S.day, read: false, ai: false
+  };
+  S.messages.unshift(placeholder);
   if (S.messages.length > 50) S.messages.pop();
+  saveState();
+
+  // 异步用 DeepSeek 重写一句更生动的，回来后替换
+  if (window.GAME_AI && window.GAME_AI.enabled) {
+    aiRewriteMessage(npc, eventType, placeholder).catch(()=>{});
+  }
+}
+
+// AI 接口（DeepSeek）
+window.GAME_AI = {
+  enabled: true,                  // 用户可在设置关闭
+  key: "sk-e333640b3a214a0c80595d0e0856e0f6",
+  endpoint: "https://api.deepseek.com/v1/chat/completions",
+  model: "deepseek-chat"          // 自动路由到便宜的 v4-flash
+};
+
+async function aiRewriteMessage(npc, eventType, msgRef) {
+  const ROLE_DESC = {
+    agent:   "经纪人林姐，干练直接，关心偶像的事业和身体",
+    brand:   "品牌方王总监，商务务实，注重数据和合作",
+    fanclub: "后援会会长，热情亲切，代表粉丝心声",
+    friend:  "圈内好友小宇，同行兼朋友，说话随意",
+    media:   "媒体记者陈姐，敏锐专业，常给提醒"
+  };
+  const SCENE = {
+    post:           "偶像刚发了一条社交动态",
+    schedule_done:  "偶像刚跑完一档行程（综艺/演唱会/代言）",
+    stress_high:    "偶像压力很大，看起来很疲惫",
+    fans_milestone: `偶像粉丝数刚突破 ${fmt(S.res.fans)}`,
+    random:         `偶像日常状态：粉丝${fmt(S.res.fans)}，压力${S.res.stress}，口碑${S.res.reputation}`
+  };
+  const prompt = `你扮演${ROLE_DESC[npc.role]}，给偶像"${S.name||"新人"}"发一条微信。场景：${SCENE[eventType]||"日常聊天"}。要求：30字内，自然口语，不要引号不要"亲爱的"开头不要解释，直接说一句。`;
+
+  try {
+    const r = await fetch(window.GAME_AI.endpoint, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${window.GAME_AI.key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: window.GAME_AI.model,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 80, stream: false, temperature: 1.0
+      })
+    });
+    if (!r.ok) throw new Error("ai " + r.status);
+    const json = await r.json();
+    const text = json.choices?.[0]?.message?.content?.trim().replace(/^["「『]|["」』]$/g, "");
+    if (text && text.length > 4) {
+      msgRef.text = text;
+      msgRef.ai = true;
+      saveState();
+      if (S.page === "message") render();
+    }
+  } catch (e) {
+    // 静默失败，保留预写文案
+    console.warn("AI 消息生成失败:", e.message);
+  }
 }
 function formatGain(g) {
   const parts = [];
@@ -563,8 +619,8 @@ function renderMessages() {
       <div style="display:flex;gap:10px;margin-bottom:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.04)">
         <div style="width:34px;height:34px;border-radius:50%;background:${m.color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0">${m.fromName.slice(-2).trim().slice(-1)}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:500;display:flex;justify-content:space-between">
-            <span style="color:${m.color}">${m.fromName}</span>
+          <div style="font-size:12px;font-weight:500;display:flex;justify-content:space-between;align-items:center">
+            <span style="color:${m.color}">${m.fromName}${m.ai ? ' <span style="font-size:9px;padding:1px 4px;border-radius:4px;background:rgba(244,63,94,0.1);color:#f43f5e;font-weight:600;margin-left:4px">AI</span>' : ''}</span>
             <span style="font-size:10px;color:#a1a1aa">Day ${m.day}</span>
           </div>
           <div style="font-size:12px;color:#52525b;margin-top:3px">${m.text}</div>
@@ -574,7 +630,7 @@ function renderMessages() {
     : `<div style="color:#a1a1aa;text-align:center;padding:24px 0;font-size:12px">还没有消息</div>`;
   return `
     <div class="page-title">消息</div>
-    <div class="page-sub">来自经纪人、品牌方、后援会、好友、媒体的私信</div>
+    <div class="page-sub">5位NPC的私信 · AI实时生成 · 不愿用可在顶栏关</div>
     <div class="card">${msgs}</div>
   `;
 }
