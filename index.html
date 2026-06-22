@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>爱豆模拟器 · 偶像养成</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <span id="brand-name">新晋偶像</span>
+      <small id="day-info">Day 1</small>
+    </div>
+    <div class="actions">
+      <button onclick="resetState()">重新开始</button>
+    </div>
+  </div>
+
+  <div id="resbar" class="resbar"></div>
+
+  <div class="layout">
+    <div id="sidebar" class="sidebar"></div>
+    <div id="main" class="main"></div>
+  </div>
+
+  <div id="log-panel">
+    <h4>动态日志 <button onclick="document.getElementById('log-panel').style.display='none'">×</button></h4>
+    <div id="log-lines"></div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
