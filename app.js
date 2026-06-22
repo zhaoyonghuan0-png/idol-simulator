@@ -272,8 +272,8 @@ function drawRadar(canvas) {
   }
 
   // 数据多边形
-  ctx.fillStyle = "rgba(255, 107, 161, 0.15)";
-  ctx.strokeStyle = "#ff6aa1";
+  ctx.fillStyle = "rgba(244, 63, 94, 0.12)";
+  ctx.strokeStyle = "#f43f5e";
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let i = 0; i < n; i++) {
@@ -291,7 +291,7 @@ function drawRadar(canvas) {
     const v = (S.stats[stats[i].key] || 0) / 100;
     const a = -Math.PI/2 + i * 2*Math.PI/n;
     const x = cx + R*v*Math.cos(a), y = cy + R*v*Math.sin(a);
-    ctx.fillStyle = "#ff6aa1";
+    ctx.fillStyle = "#f43f5e";
     ctx.beginPath(); ctx.arc(x, y, 3, 0, 2*Math.PI); ctx.fill();
   }
 
