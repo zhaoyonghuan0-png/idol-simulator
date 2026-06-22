@@ -426,6 +426,8 @@ function advanceSchedule() {
     S.chats.push({ ...fc, day: S.day });
     checkDailyTasks();
     checkEvents();
+    checkAchievements();
+    checkAwards();
     if (S._advanceTimer) { clearInterval(S._advanceTimer); S._advanceTimer = null; }
   }
   saveState();
